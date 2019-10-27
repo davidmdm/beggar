@@ -52,7 +52,3 @@ const createServer = () => {
 };
 
 module.exports = { createServer };
-
-const server = createServer();
-
-server.listen(3000, () => console.log('listening on: %s', server.address().port));

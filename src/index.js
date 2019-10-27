@@ -1,9 +1,13 @@
+//@ts-nocheck
 'use strict';
 
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
 const { Duplex } = require('stream');
+
+const { spy } = require('./spy');
+const { readableToBuffer } = require('./util');
 
 const httpLib = protocol => {
   switch (protocol) {
@@ -16,17 +20,13 @@ const httpLib = protocol => {
   }
 };
 
-const readableToBuffer = readable => {
-  return new Promise((resolve, reject) => {
-    let buffer = Buffer.from([]);
-    readable
-      .on('data', data => (buffer = Buffer.concat([buffer, data])))
-      .on('end', () => resolve(buffer))
-      .on('error', reject);
-  });
-};
+const request = (uri, options = {}) => {
+  if (typeof uri === 'object') {
+    options = uri;
+  } else {
+    options.uri = uri;
+  }
 
-const request = options => {
   const url = new URL(options.uri);
   const req = httpLib(url.protocol).request(url, {
     method: options.method && options.method.toUpperCase(),
@@ -61,11 +61,29 @@ const request = options => {
     write: req.write.bind(req),
   });
 
+  // SPY BLOCK ---------------------------------------
+  // spy('duplex', duplex);
+  // spy('req', req);
+  // responsePromise.then(resp => spy('resp', resp));
+  // -------------------------------------------------
+
   let srcPipedToDuplex = false;
 
   duplex.on('pipe', () => (srcPipedToDuplex = true));
   duplex.on('finish', () => req.end());
-  responsePromise.then(resp => resp.on('close', () => duplex.push(null)));
+  req.on('error', err => duplex.emit('error', err));
+  responsePromise.then(resp => {
+    resp.on('close', () => duplex.push(null));
+    resp.on('error', err => duplex.emit('error', err));
+  });
+
+  const pipe = duplex.pipe.bind(duplex);
+  duplex.pipe = (...args) => {
+    if (!srcPipedToDuplex) {
+      req.end();
+    }
+    return pipe(...args);
+  };
 
   duplex.then = async fn => {
     if (!srcPipedToDuplex) {
@@ -73,7 +91,7 @@ const request = options => {
     }
     const buffer = await readableToBuffer(duplex);
     const response = await responsePromise;
-    response.body = options.json === true ? JSON.parse(buffer.toString()) : buffer.toString();
+    response.body = options.json === true ? JSON.parse(buffer.toString()) : buffer.toString() || undefined;
     return fn(response);
   };
 
