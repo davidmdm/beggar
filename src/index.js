@@ -2,9 +2,8 @@
 
 const http = require('http');
 const https = require('https');
-const { Duplex } = require('stream');
-
 const { URL } = require('url');
+const { Duplex } = require('stream');
 
 const httpLib = protocol => {
   switch (protocol) {
@@ -17,7 +16,7 @@ const httpLib = protocol => {
   }
 };
 
-const getAllDataFromReadable = readable => {
+const readableToBuffer = readable => {
   return new Promise((resolve, reject) => {
     let buffer = Buffer.from([]);
     readable
@@ -46,7 +45,7 @@ const request = options => {
   const responsePromise = new Promise(resolve => req.on('response', resolve));
 
   const duplex = new Duplex({
-    read() {
+    read: function() {
       responsePromise.then(response => {
         response.once('readable', () => {
           for (;;) {
@@ -59,20 +58,22 @@ const request = options => {
         });
       });
     },
-    write(chunk, enc, cb) {
-      req.write(chunk, enc, cb);
-    },
+    write: req.write.bind(req),
   });
 
-  duplex.on('finish', () => req.end());
+  let srcPipedToDuplex = false;
 
+  duplex.on('pipe', () => (srcPipedToDuplex = true));
+  duplex.on('finish', () => req.end());
   responsePromise.then(resp => resp.on('close', () => duplex.push(null)));
 
   duplex.then = async fn => {
-    req.end();
-    const body = await getAllDataFromReadable(duplex);
+    if (!srcPipedToDuplex) {
+      req.end();
+    }
+    const buffer = await readableToBuffer(duplex);
     const response = await responsePromise;
-    response.body = options.json === true ? JSON.parse(body.toString()) : body.toString();
+    response.body = options.json === true ? JSON.parse(buffer.toString()) : buffer.toString();
     return fn(response);
   };
 

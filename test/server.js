@@ -16,8 +16,8 @@ const getAllDataFromReadable = readable => {
   });
 };
 
-http
-  .createServer((req, res) => {
+const createServer = () => {
+  return http.createServer((req, res) => {
     if (req.url === '/home') {
       return res.writeHead(200, { 'Content-Type': 'text/plain' }).end('Welcome to the homepage');
     }
@@ -48,5 +48,11 @@ http
     }
 
     return res.writeHead(404).end();
-  })
-  .listen(3000, () => console.log('listening on port 3000'));
+  });
+};
+
+module.exports = { createServer };
+
+const server = createServer();
+
+server.listen(3000, () => console.log('listening on: %s', server.address().port));
