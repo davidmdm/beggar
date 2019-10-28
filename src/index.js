@@ -6,7 +6,6 @@ const https = require('https');
 const { URL } = require('url');
 const { Duplex } = require('stream');
 
-const { spy } = require('./spy');
 const { readableToBuffer } = require('./util');
 
 const httpLib = protocol => {
@@ -31,6 +30,7 @@ const request = (uri, options = {}) => {
   const req = httpLib(url.protocol).request(url, {
     method: options.method && options.method.toUpperCase(),
     headers: options.headers,
+    auth: options.auth && options.auth.user + ':' + options.auth.pass,
   });
 
   if (options.method && options.method.toLowerCase() !== 'get') {
@@ -60,12 +60,6 @@ const request = (uri, options = {}) => {
     },
     write: req.write.bind(req),
   });
-
-  // SPY BLOCK ---------------------------------------
-  // spy('duplex', duplex);
-  // spy('req', req);
-  // responsePromise.then(resp => spy('resp', resp));
-  // -------------------------------------------------
 
   let srcPipedToDuplex = false;
 

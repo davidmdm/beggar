@@ -47,6 +47,22 @@ const createServer = () => {
       });
     }
 
+    if (req.url === '/basicAuth') {
+      if (typeof req.headers.authorization !== 'string') {
+        return res.writeHead(401).end();
+      }
+      if (!req.headers.authorization.startsWith('Basic ')) {
+        return res.writeHead(401).end();
+      }
+      const [user, pass] = Buffer.from(req.headers.authorization.slice(6), 'base64')
+        .toString()
+        .split(':');
+      if (user !== 'admin' || pass !== '1234') {
+        return res.writeHead(401).end();
+      }
+      return res.end('Authenticated material');
+    }
+
     return res.writeHead(404).end();
   });
 };

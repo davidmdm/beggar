@@ -57,6 +57,30 @@ describe('Tests', () => {
     assert.deepEqual(echoResponse.body, 'readable data');
   });
 
+  it('should pipe data to request and pipe data from response', async () => {
+    const readable = new Readable();
+    readable.push('pipe in pipe out');
+    readable.push(null);
+
+    let buffer = Buffer.from([]);
+
+    await new Promise(resolve =>
+      readable
+        .pipe(request({ method: 'post', uri: baseUri + '/echo' }))
+        .pipe(
+          new Writable({
+            write(chunk, _, cb) {
+              buffer = Buffer.concat([buffer, chunk]);
+              cb();
+            },
+          })
+        )
+        .on('finish', resolve)
+    );
+
+    assert.equal(buffer.toString(), 'pipe in pipe out');
+  });
+
   it('should read the body via data events', async () => {
     let body = '';
     const req = request(baseUri + '/home');
@@ -83,5 +107,19 @@ describe('Tests', () => {
     );
 
     assert.equal(buffer.toString(), 'Welcome to the homepage');
+  });
+
+  it('should fail return 401 if no basic auth is provided', async () => {
+    const response = await request(baseUri + '/basicAuth');
+    assert.equal(response.statusCode, 401);
+  });
+
+  it('should give proper basic authentication credentials', async () => {
+    const response = await request({
+      uri: baseUri + '/basicAuth',
+      auth: { user: 'admin', pass: '1234' },
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, 'Authenticated material');
   });
 });
