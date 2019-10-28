@@ -79,14 +79,29 @@ const request = (uri, options = {}) => {
     return pipe(...args);
   };
 
-  duplex.then = async fn => {
-    if (!srcPipedToDuplex) {
-      req.end();
-    }
-    const buffer = await readableToBuffer(duplex);
-    const response = await responsePromise;
-    response.body = options.json === true ? JSON.parse(buffer.toString()) : buffer.toString() || undefined;
-    return fn(response);
+  duplex.then = (fn, handle) => {
+    return new Promise((resolve, reject) => {
+      duplex.on('error', reject);
+      if (!srcPipedToDuplex) {
+        duplex.end();
+      }
+
+      return Promise.all([responsePromise, readableToBuffer(duplex)])
+        .then(([response, buffer]) => {
+          response.body = options.json === true ? JSON.parse(buffer.toString()) : buffer.toString() || undefined;
+          return fn(response);
+        })
+        .catch(reject);
+    }).catch(err => {
+      if (handle) {
+        return handle(err);
+      }
+      return Promise.reject(err);
+    });
+  };
+
+  duplex.catch = handle => {
+    return duplex.then(x => x, handle);
   };
 
   return duplex;

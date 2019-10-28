@@ -2,6 +2,7 @@
 
 const http = require('http');
 const { Readable } = require('stream');
+const bodyParser = require('body-parser');
 
 const getAllDataFromReadable = readable => {
   if (!(readable instanceof Readable)) {
@@ -61,6 +62,20 @@ const createServer = () => {
         return res.writeHead(401).end();
       }
       return res.end('Authenticated material');
+    }
+
+    if (req.url === '/url-encoded') {
+      return bodyParser.urlencoded({ extended: true })(req, res, err => {
+        if (err) {
+          return res.writeHead(400).end(err.message);
+        }
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(req.body));
+      });
+    }
+
+    if (req.url === '/connection-drop') {
+      return res.destroy();
     }
 
     return res.writeHead(404).end();

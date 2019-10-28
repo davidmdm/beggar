@@ -3,16 +3,17 @@
 const { request } = require('../src');
 const { createServer } = require('./server');
 
-new Promise(resolve => createServer().listen(3000, resolve))
+const p = new Promise(resolve => createServer().listen(3000, resolve))
   .then(() => {
-    return request('http://localhost:3000/details', {
+    return request('http://localhost:3000/connection-drop', {
+      method: 'post',
       auth: 'superpotatot',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       json: true,
-    });
+      body: 'hello[name][0][potato]=world',
+    }).catch(console.error);
   })
   .then(response => {
-    console.log(response.body);
-    console.log(Buffer.from(response.body.request.headers.authorization.slice(6), 'base64').toString());
+    console.log(JSON.stringify(response.body));
   })
-  .then(() => process.exit(0))
-  .catch(console.error);
+  .catch(err => console.error(err.message));
