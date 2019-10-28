@@ -74,7 +74,7 @@ const request = (uri, options = {}) => {
   const pipe = duplex.pipe.bind(duplex);
   duplex.pipe = (...args) => {
     if (!srcPipedToDuplex) {
-      req.end();
+      duplex.end();
     }
     return pipe(...args);
   };
