@@ -6,7 +6,6 @@ const { Readable, Writable } = require('stream');
 
 const { request } = require('../src');
 const { createServer } = require('./server');
-const { spy } = require('../src/spy');
 
 describe('Tests', () => {
   let baseUri;
@@ -121,5 +120,13 @@ describe('Tests', () => {
     });
     assert.equal(response.statusCode, 200);
     assert.equal(response.body, 'Authenticated material');
+  });
+
+  it('should catch a response error ie socket hang up', async () => {
+    await assert.rejects(() => request(baseUri + '/connection-drop'), { message: 'socket hang up' });
+  });
+
+  it('should catch a request error ie ECONNREFUSED', async () => {
+    await assert.rejects(() => request('http://localhost:1234'), { message: 'connect ECONNREFUSED 127.0.0.1:1234' });
   });
 });
