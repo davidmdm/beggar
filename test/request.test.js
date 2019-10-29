@@ -116,7 +116,36 @@ describe('Tests', () => {
       json: true,
     };
     const formResponse = await request(options);
+    assert.equal(formResponse.statusCode, 200);
     assert.deepEqual(formResponse.body, options.form);
+  });
+
+  it('should send a multipart form', async () => {
+    const jsonReadable = new Readable();
+    jsonReadable.push(JSON.stringify({ hello: 'world' }));
+    jsonReadable.push(null);
+
+    const options = {
+      method: 'post',
+      uri: baseUri + '/multipart',
+      formData: {
+        jsonReadable,
+        key: 'value',
+      },
+      json: true,
+    };
+    const formResponse = await request(options);
+    assert.equal(formResponse.statusCode, 200);
+    assert.deepEqual(formResponse.body, [
+      {
+        fieldname: 'jsonReadable',
+        data: '{"hello":"world"}',
+      },
+      {
+        fieldname: 'key',
+        data: 'value',
+      },
+    ]);
   });
 
   it('should fail return 401 if no basic auth is provided', async () => {

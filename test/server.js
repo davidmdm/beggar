@@ -1,8 +1,10 @@
+//@ts-nocheck
 'use strict';
 
 const http = require('http');
 const { Readable } = require('stream');
 const bodyParser = require('body-parser');
+const multer = require('multer');
 
 const getAllDataFromReadable = readable => {
   if (!(readable instanceof Readable)) {
@@ -76,6 +78,23 @@ const createServer = () => {
 
     if (req.url === '/connection-drop') {
       return res.destroy();
+    }
+
+    if (req.url === '/multipart') {
+      return multer().any()(req, res, err => {
+        if (err) {
+          return res.writeHead(400).end();
+        }
+        res.setHeader('Content-Type', 'application/json');
+        res.end(
+          JSON.stringify(
+            req.files.map(x => ({
+              fieldname: x.fieldname,
+              data: x.buffer.toString(),
+            }))
+          )
+        );
+      });
     }
 
     return res.writeHead(404).end();

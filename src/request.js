@@ -7,6 +7,7 @@ const { URL } = require('url');
 const { Duplex } = require('stream');
 
 const qs = require('qs');
+const FormData = require('form-data');
 
 const { readableToBuffer } = require('./util');
 
@@ -34,20 +35,6 @@ const request = (uri, options = {}) => {
     headers: options.headers,
     auth: options.auth && options.auth.user + ':' + options.auth.pass,
   });
-
-  if (!options.method || options.method.toLowerCase() === 'get') {
-    req.end();
-  } else if (options.method.toLowerCase() !== 'get') {
-    if (typeof options.body === 'object') {
-      req.setHeader('Content-Type', 'application/json');
-      req.end(JSON.stringify(options.body));
-    } else if (options.body) {
-      req.end(options.body);
-    } else if (options.form) {
-      req.setHeader('Content-Type', 'application/x-www-form-urlencoded');
-      req.end(qs.stringify(options.form));
-    }
-  }
 
   const responsePromise = new Promise(resolve => req.on('response', resolve));
 
@@ -86,6 +73,27 @@ const request = (uri, options = {}) => {
     return pipe(...args);
   };
 
+  if (!options.method || options.method.toLowerCase() === 'get') {
+    duplex.end();
+  } else if (options.method.toLowerCase() !== 'get') {
+    if (typeof options.body === 'object') {
+      req.setHeader('Content-Type', 'application/json');
+      duplex.end(JSON.stringify(options.body));
+    } else if (options.body) {
+      duplex.end(options.body);
+    } else if (options.form) {
+      req.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+      duplex.end(qs.stringify(options.form));
+    } else if (options.formData) {
+      const form = new FormData();
+      for (const [key, value] of Object.entries(options.formData)) {
+        form.append(key, value, { filename: key });
+      }
+      req.setHeader('Content-Type', 'multipart/form-data;boundary=' + form.getBoundary());
+      form.pipe(duplex);
+    }
+  }
+
   duplex.then = (fn, handle) => {
     const promise = Promise.race([
       new Promise((_, reject) => duplex.on('error', reject)),
@@ -94,7 +102,10 @@ const request = (uri, options = {}) => {
           duplex.end();
         }
         const [response, buffer] = await Promise.all([responsePromise, readableToBuffer(duplex)]);
-        response.body = options.json === true ? JSON.parse(buffer.toString()) : buffer.toString() || undefined;
+        const responseString = buffer.toString();
+        if (responseString) {
+          response.body = options.json === true ? JSON.parse(responseString) : responseString;
+        }
         return fn(response);
       })(),
     ]);
