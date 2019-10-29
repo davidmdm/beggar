@@ -6,6 +6,8 @@ const https = require('https');
 const { URL } = require('url');
 const { Duplex } = require('stream');
 
+const qs = require('qs');
+
 const { readableToBuffer } = require('./util');
 
 const httpLib = protocol => {
@@ -33,12 +35,17 @@ const request = (uri, options = {}) => {
     auth: options.auth && options.auth.user + ':' + options.auth.pass,
   });
 
-  if (options.method && options.method.toLowerCase() !== 'get') {
+  if (!options.method || options.method.toLowerCase() === 'get') {
+    req.end();
+  } else if (options.method.toLowerCase() !== 'get') {
     if (typeof options.body === 'object') {
       req.setHeader('Content-Type', 'application/json');
       req.end(JSON.stringify(options.body));
     } else if (options.body) {
       req.end(options.body);
+    } else if (options.form) {
+      req.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+      req.end(qs.stringify(options.form));
     }
   }
 

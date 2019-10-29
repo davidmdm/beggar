@@ -108,6 +108,17 @@ describe('Tests', () => {
     assert.equal(buffer.toString(), 'Welcome to the homepage');
   });
 
+  it('should send a properly parsable x-www-form-urlencoded when options.form is supplied', async () => {
+    const options = {
+      method: 'post',
+      uri: baseUri + '/url-encoded',
+      form: { hello: 'world', arr: [1, 2, 3] },
+      json: true,
+    };
+    const formResponse = await request(options);
+    assert.deepEqual(formResponse.body, options.form);
+  });
+
   it('should fail return 401 if no basic auth is provided', async () => {
     const response = await request(baseUri + '/basicAuth');
     assert.equal(response.statusCode, 401);

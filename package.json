@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "dependencies": {},
+  "dependencies": {
+    "qs": "^6.9.0"
+  },
   "devDependencies": {
     "@types/body-parser": "^1.17.1",
     "@types/mocha": "^5.2.7",
     "@types/node": "^12.11.7",
+    "@types/qs": "^6.5.3",
     "body-parser": "^1.19.0",
     "mocha": "^6.2.2",
     "request": "^2.88.0"
