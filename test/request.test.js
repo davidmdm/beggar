@@ -2,6 +2,7 @@
 'use strict';
 
 const assert = require('assert');
+const { format } = require('util');
 const { Readable, Writable } = require('stream');
 
 const { request } = require('../src');
@@ -189,4 +190,12 @@ describe('Tests', () => {
     assert.ok(error);
     assert.equal(error.message, 'connect ECONNREFUSED 127.0.0.1:1234');
   });
+
+  for (const method of ['get', 'post', 'put', 'patch']) {
+    it(format('should have utility method for making (%s) request', method.toUpperCase()), async () => {
+      const response = await request[method](baseUri + '/details', { json: true });
+      assert.equal(response.statusCode, 200);
+      assert.equal(response.body.request.method, method.toUpperCase());
+    });
+  }
 });

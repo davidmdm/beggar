@@ -120,4 +120,15 @@ const request = (uri, options = {}) => {
   return duplex;
 };
 
+for (const method of http.METHODS) {
+  request[method.toLowerCase()] = (uri, options = {}) => {
+    if (typeof uri === 'string') {
+      options.method = method;
+    } else {
+      uri.method = method;
+    }
+    return request(uri, options);
+  };
+}
+
 module.exports = { request };
