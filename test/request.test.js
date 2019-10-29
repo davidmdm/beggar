@@ -119,6 +119,7 @@ describe('Tests', () => {
     const response = await request.get({ uri: baseUri + '/redirect/3', followRedirects: true });
     assert.equal(response.statusCode, 200);
     assert.equal(response.body, 'Welcome to the homepage');
+    assert.deepEqual(response.redirects, [baseUri + '/redirect/2', baseUri + '/redirect/1', baseUri + '/home']);
   });
 
   it('should redirect if followRedirects is true (streams)', async () => {

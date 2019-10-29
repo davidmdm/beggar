@@ -40,9 +40,13 @@ const request = (uri, options = {}) => {
     req.on('response', resp => {
       if (options.followRedirects && resp.statusCode === 302) {
         const location = resp.headers.location;
+        const qualifiedRedirection = location.startsWith('/') ? url.origin + location : location;
         return request
-          .get({ ...options, uri: location.startsWith('/') ? url.origin + location : location })
-          .on('response', resolve)
+          .get({ ...options, uri: qualifiedRedirection })
+          .on('response', nextResp => {
+            nextResp.redirects = [qualifiedRedirection, ...(nextResp.redirects || [])];
+            resolve(nextResp);
+          })
           .on('error', reject);
       }
       return resolve(resp);
