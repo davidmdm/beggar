@@ -36,21 +36,34 @@ const request = (uri, options = {}) => {
     auth: options.auth && options.auth.user + ':' + options.auth.pass,
   });
 
-  const responsePromise = new Promise(resolve => req.on('response', resolve));
+  const responsePromise = new Promise((resolve, reject) =>
+    req.on('response', resp => {
+      if (options.followRedirects && resp.statusCode === 302) {
+        const location = resp.headers.location;
+        return request
+          .get({ ...options, uri: location.startsWith('/') ? url.origin + location : location })
+          .on('response', resolve)
+          .on('error', reject);
+      }
+      return resolve(resp);
+    })
+  );
 
   const duplex = new Duplex({
     read: function() {
-      responsePromise.then(response => {
-        response.once('readable', () => {
-          for (;;) {
-            const chunk = response.read();
-            if (chunk === null) {
-              break;
+      responsePromise
+        .then(response => {
+          response.once('readable', () => {
+            for (;;) {
+              const chunk = response.read();
+              if (chunk === null) {
+                break;
+              }
+              this.push(chunk);
             }
-            this.push(chunk);
-          }
-        });
-      });
+          });
+        })
+        .catch(err => this.emit('error', err));
     },
     write: req.write.bind(req),
   });
@@ -60,10 +73,13 @@ const request = (uri, options = {}) => {
   duplex.on('pipe', () => (srcPipedToDuplex = true));
   duplex.on('finish', () => req.end());
   req.on('error', err => duplex.emit('error', err));
-  responsePromise.then(resp => {
-    resp.on('close', () => duplex.push(null));
-    resp.on('error', err => duplex.emit('error', err));
-  });
+  responsePromise
+    .then(resp => {
+      duplex.emit('response', resp);
+      resp.on('close', () => duplex.push(null));
+      resp.on('error', err => duplex.emit('error', err));
+    })
+    .catch(err => duplex.emit('error', err));
 
   const pipe = duplex.pipe.bind(duplex);
   duplex.pipe = (...args) => {

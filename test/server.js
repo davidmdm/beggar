@@ -97,6 +97,15 @@ const createServer = () => {
       });
     }
 
+    if (/^\/redirect\/[1-9]$/.test(req.url)) {
+      const number = parseInt(req.url.slice(-1));
+      return res.writeHead(302, { Location: number === 1 ? '/home' : '/redirect/' + (number - 1) }).end();
+    }
+
+    if (req.url === '/redirectToHangUp') {
+      return res.writeHead(302, { Location: '/connection-drop' }).end();
+    }
+
     return res.writeHead(404).end();
   });
 };

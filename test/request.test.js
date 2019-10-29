@@ -109,6 +109,59 @@ describe('Tests', () => {
     assert.equal(buffer.toString(), 'Welcome to the homepage');
   });
 
+  it('should not redirect if option is not set', async () => {
+    const response = await request.get(baseUri + '/redirect/3');
+    assert.equal(response.statusCode, 302);
+    assert.equal(response.headers.location, '/redirect/2');
+  });
+
+  it('should redirect if followRedirects is true (promises)', async () => {
+    const response = await request.get({ uri: baseUri + '/redirect/3', followRedirects: true });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, 'Welcome to the homepage');
+  });
+
+  it('should redirect if followRedirects is true (streams)', async () => {
+    let buffer = Buffer.from([]);
+    await new Promise(resolve =>
+      request
+        .get({ uri: baseUri + '/redirect/3', followRedirects: true })
+        .pipe(
+          new Writable({
+            write(chunk, _, cb) {
+              buffer = Buffer.concat([buffer, chunk]);
+              cb();
+            },
+          })
+        )
+        .on('finish', resolve)
+    );
+    assert.equal(buffer.toString(), 'Welcome to the homepage');
+  });
+
+  it('should throw appropriate error if redirect end in some response error (promises)', async () => {
+    await assert.rejects(
+      request({
+        uri: baseUri + '/redirectToHangUp',
+        followRedirects: true,
+      }),
+      {
+        message: 'socket hang up',
+      }
+    );
+  });
+
+  it('should throw appropriate error if redirect end in some response error (stream)', async () => {
+    const err = await new Promise(resolve =>
+      request({
+        uri: baseUri + '/redirectToHangUp',
+        followRedirects: true,
+      }).on('error', resolve)
+    );
+
+    assert.equal(err.message, 'socket hang up');
+  });
+
   it('should send a properly parsable x-www-form-urlencoded when options.form is supplied', async () => {
     const options = {
       method: 'post',
