@@ -75,23 +75,21 @@ const request = (uri, options = {}) => {
 
   if (!options.method || options.method.toLowerCase() === 'get') {
     duplex.end();
-  } else if (options.method.toLowerCase() !== 'get') {
-    if (typeof options.body === 'object') {
-      req.setHeader('Content-Type', 'application/json');
-      duplex.end(JSON.stringify(options.body));
-    } else if (options.body) {
-      duplex.end(options.body);
-    } else if (options.form) {
-      req.setHeader('Content-Type', 'application/x-www-form-urlencoded');
-      duplex.end(qs.stringify(options.form));
-    } else if (options.formData) {
-      const form = new FormData();
-      for (const [key, value] of Object.entries(options.formData)) {
-        form.append(key, value, { filename: key });
-      }
-      req.setHeader('Content-Type', 'multipart/form-data;boundary=' + form.getBoundary());
-      form.pipe(duplex);
+  } else if (typeof options.body === 'object') {
+    req.setHeader('Content-Type', 'application/json');
+    duplex.end(JSON.stringify(options.body));
+  } else if (options.body) {
+    duplex.end(options.body);
+  } else if (options.form) {
+    req.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+    duplex.end(qs.stringify(options.form));
+  } else if (options.formData) {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(options.formData)) {
+      form.append(key, value, { filename: key });
     }
+    req.setHeader('Content-Type', 'multipart/form-data;boundary=' + form.getBoundary());
+    form.pipe(duplex);
   }
 
   duplex.then = (fn, handle) => {
