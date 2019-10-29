@@ -129,4 +129,24 @@ describe('Tests', () => {
   it('should catch a request error ie ECONNREFUSED', async () => {
     await assert.rejects(() => request('http://localhost:1234'), { message: 'connect ECONNREFUSED 127.0.0.1:1234' });
   });
+
+  it('should emit an error not using promises (response error)', async () => {
+    const error = await new Promise(resolve =>
+      request(baseUri + '/connection-drop')
+        .on('error', resolve)
+        .end()
+    );
+    assert.ok(error);
+    assert.equal(error.message, 'socket hang up');
+  });
+
+  it('should emit an error not using promises (request error)', async () => {
+    const error = await new Promise(resolve =>
+      request('http://localhost:1234')
+        .on('error', resolve)
+        .end()
+    );
+    assert.ok(error);
+    assert.equal(error.message, 'connect ECONNREFUSED 127.0.0.1:1234');
+  });
 });
