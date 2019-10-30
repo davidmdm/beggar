@@ -7,7 +7,7 @@ const { URL } = require('url');
 const { format } = require('util');
 const { Readable, Writable } = require('stream');
 
-const { request } = require('../src');
+const { request } = require('..');
 const { createServer } = require('./server');
 
 describe('Tests', () => {
@@ -260,4 +260,15 @@ describe('Tests', () => {
       assert.equal(response.body.request.method, method.toUpperCase());
     });
   }
+
+  it('should support headers as array of strings', async () => {
+    const response = await request({
+      uri: baseUri + '/details',
+      headers: { 'Accept-Encoding': ['application/octet-stream', 'application/zip'] },
+      json: true,
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.request.headers['accept-encoding'], 'application/octet-stream, application/zip');
+  });
 });
