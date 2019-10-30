@@ -23,10 +23,10 @@ const httpLib = protocol => {
 };
 
 const request = (uri, options = {}) => {
-  if (typeof uri === 'object') {
-    options = uri;
+  if (typeof uri === 'string' || uri instanceof URL) {
+    options.uri = new URL(uri);
   } else {
-    options.uri = uri;
+    options = uri;
   }
 
   const url = new URL(options.uri);

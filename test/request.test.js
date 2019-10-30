@@ -2,6 +2,8 @@
 'use strict';
 
 const assert = require('assert');
+
+const { URL } = require('url');
 const { format } = require('util');
 const { Readable, Writable } = require('stream');
 
@@ -22,6 +24,12 @@ describe('Tests', () => {
 
   it('should send a get request to homepage', async () => {
     const homepageResponse = await request(baseUri + '/home');
+    assert.equal(homepageResponse.statusCode, 200);
+    assert.equal(homepageResponse.body, 'Welcome to the homepage');
+  });
+
+  it('should support a URL as argument for a request', async () => {
+    const homepageResponse = await request(new URL(baseUri + '/home'));
     assert.equal(homepageResponse.statusCode, 200);
     assert.equal(homepageResponse.body, 'Welcome to the homepage');
   });
