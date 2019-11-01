@@ -38,7 +38,7 @@ const request = (uri, options = {}) => {
 
   const responsePromise = new Promise((resolve, reject) =>
     req.on('response', resp => {
-      if (options.followRedirects && resp.statusCode === 302) {
+      if (options.followRedirects && resp.statusCode >= 301 && resp.statusCode <= 303) {
         const location = resp.headers.location;
         const qualifiedRedirection = location.startsWith('/') ? url.origin + location : location;
         return request
