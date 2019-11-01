@@ -1,6 +1,6 @@
 {
-  "name": "simple-request",
-  "version": "1.0.0",
+  "name": "begger",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "typings": "index.d.ts",
@@ -21,6 +21,7 @@
     "typescript": "^3.6.4"
   },
   "scripts": {
+    "pub": "npm i && npm t && rm -rf ./node_modules && npm i --production && npm publish",
     "test": "mocha 'test/**/*test.js' --exit"
   },
   "keywords": [],
