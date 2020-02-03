@@ -24,7 +24,7 @@ const httpLib = protocol => {
 
 const request = (uri, options = {}) => {
   if (typeof uri === 'string' || uri instanceof URL) {
-    options.uri = new URL(uri);
+    options.uri = uri;
   } else {
     options = uri;
   }
@@ -114,7 +114,6 @@ const request = (uri, options = {}) => {
 
   duplex.then = (fn, handle) => {
     const promise = Promise.race([
-      new Promise((_, reject) => duplex.on('error', reject)),
       (async () => {
         if (!srcPipedToDuplex) {
           duplex.end();
@@ -126,6 +125,7 @@ const request = (uri, options = {}) => {
         }
         return fn(response);
       })(),
+      new Promise((_, reject) => duplex.on('error', reject)),
     ]);
     if (handle) {
       return promise.catch(handle);
