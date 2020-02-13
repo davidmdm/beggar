@@ -1,24 +1,24 @@
 {
   "name": "beggar",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "main": "index.js",
   "typings": "index.d.ts",
   "dependencies": {
-    "form-data": "^2.5.1",
-    "qs": "^6.9.0"
+    "form-data": "^3.0.0",
+    "qs": "^6.9.1"
   },
   "devDependencies": {
-    "@types/body-parser": "^1.17.1",
-    "@types/mocha": "^5.2.7",
-    "@types/multer": "^1.3.10",
-    "@types/node": "^12.12.0",
-    "@types/qs": "^6.5.3",
+    "@types/body-parser": "^1.19.0",
+    "@types/mocha": "^7.0.1",
+    "@types/multer": "^1.4.2",
+    "@types/node": "^13.7.1",
+    "@types/qs": "^6.9.1",
     "body-parser": "^1.19.0",
-    "mocha": "^6.2.2",
+    "mocha": "^7.0.1",
     "multer": "^1.4.2",
-    "request": "^2.88.0",
-    "typescript": "^3.6.4"
+    "request": "^2.88.2",
+    "typescript": "^3.7.5"
   },
   "scripts": {
     "pub": "npm i && npm t && rm -rf ./node_modules && npm i --production && npm publish",
