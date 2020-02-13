@@ -10,13 +10,13 @@ const { Readable, Writable } = require('stream');
 const { request } = require('..');
 const { createServer } = require('./server');
 
+const testingServer = createServer();
+
 describe('Tests', () => {
   let baseUri;
-  let testingServer;
 
   before(async () => {
-    testingServer = createServer();
-    await new Promise(resolve => testingServer.listen(resolve));
+    await new Promise(resolve => testingServer.listen(0, resolve));
     baseUri = 'http://localhost:' + testingServer.address().port;
   });
 
@@ -222,6 +222,24 @@ describe('Tests', () => {
         data: 'value',
       },
     ]);
+  });
+
+  it('should send and return query', async () => {
+    const resp = await request.get({
+      uri: baseUri + '/query',
+      query: { answer: 42 },
+      json: true,
+    });
+    assert.deepEqual(resp.body, { answer: 42 });
+  });
+
+  it('should override defined values in hardcoded query string', async () => {
+    const resp = await request.get({
+      uri: baseUri + '/query?hello=world&patate=aubergine',
+      query: { patate: 'patate' },
+      json: true,
+    });
+    assert.deepEqual(resp.body, { hello: 'world', patate: 'patate' });
   });
 
   it('should fail return 401 if no basic auth is provided', async () => {
