@@ -15,6 +15,8 @@ export declare type RequestOptions = {
   };
   body?: Buffer | string | Object;
   form?: Dictionary<any>;
+  qs?: Dictionary<any>;
+  query?: Dictionary<any>;
   formData?: Dictionary<string | Buffer | Readable>;
 };
 export declare type ResolvedResponse = IncomingMessage & {

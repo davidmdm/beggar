@@ -2,9 +2,11 @@
 'use strict';
 
 const http = require('http');
-const { Readable } = require('stream');
 const bodyParser = require('body-parser');
 const multer = require('multer');
+const querystring = require('querystring');
+
+const { Readable } = require('stream');
 
 const getAllDataFromReadable = readable => {
   if (!(readable instanceof Readable)) {
@@ -104,6 +106,11 @@ const createServer = () => {
 
     if (req.url === '/redirectToHangUp') {
       return res.writeHead(302, { Location: '/connection-drop' }).end();
+    }
+
+    if (req.url.startsWith('/query?')) {
+      const q = querystring.parse(req.url.slice(7));
+      return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(q));
     }
 
     return res.writeHead(404).end();

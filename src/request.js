@@ -7,6 +7,7 @@ const { URL } = require('url');
 const { Duplex } = require('stream');
 
 const qs = require('qs');
+const querystring = require('querystring');
 const FormData = require('form-data');
 
 const { readableToBuffer } = require('./util');
@@ -30,6 +31,13 @@ const request = (uri, options = {}) => {
   }
 
   const url = new URL(options.uri);
+
+  if (options.qs) {
+    url.search = qs.stringify({ ...Object.fromEntries(url.searchParams), ...options.qs });
+  } else if (options.query) {
+    url.search = querystring.stringify({ ...Object.fromEntries(url.searchParams), ...options.query });
+  }
+
   const req = httpLib(url.protocol).request(url, {
     method: options.method && options.method.toUpperCase(),
     headers: options.headers,
