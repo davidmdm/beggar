@@ -50,7 +50,7 @@ const request = (uri, options = {}) => {
         const location = resp.headers.location;
         const qualifiedRedirection = location.startsWith('/') ? url.origin + location : location;
         return request
-          .get({ ...options, uri: qualifiedRedirection })
+          .get(qualifiedRedirection, { followRedirects: true, json: options.json })
           .on('response', nextResp => {
             nextResp.redirects = [qualifiedRedirection, ...(nextResp.redirects || [])];
             resolve(nextResp);
@@ -88,7 +88,8 @@ const request = (uri, options = {}) => {
   responsePromise
     .then(resp => {
       duplex.emit('response', resp);
-      resp.on('close', () => duplex.push(null));
+      resp.on('close', () => duplex.emit('close'));
+      resp.on('end', () => duplex.push(null));
       resp.on('error', err => duplex.emit('error', err));
     })
     .catch(err => duplex.emit('error', err));

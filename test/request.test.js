@@ -239,11 +239,11 @@ describe('Tests', () => {
   });
 
   it('should catch a response error ie socket hang up', async () => {
-    await assert.rejects(() => request(baseUri + '/connection-drop'), { message: 'socket hang up' });
+    await assert.rejects(request(baseUri + '/connection-drop'), { message: 'socket hang up' });
   });
 
   it('should catch a request error ie ECONNREFUSED', async () => {
-    await assert.rejects(() => request('http://localhost:1234'), { message: 'connect ECONNREFUSED 127.0.0.1:1234' });
+    await assert.rejects(request('http://localhost:1234'), { message: 'connect ECONNREFUSED 127.0.0.1:1234' });
   });
 
   it('should emit an error not using promises (response error)', async () => {
