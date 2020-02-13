@@ -22,6 +22,19 @@ describe('Tests', () => {
 
   after(() => new Promise(resolve => testingServer.close(resolve)));
 
+  it('should not drop beginning of payload when response is read to later', async () => {
+    const echoRequest = request({
+      method: 'post',
+      uri: baseUri + '/echo',
+      body: 'the string I want it to echo back to me',
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    const response = await echoRequest;
+    assert.equal(response.body, 'the string I want it to echo back to me');
+  });
+
   it('should send a get request to homepage', async () => {
     const homepageResponse = await request(baseUri + '/home');
     assert.equal(homepageResponse.statusCode, 200);
