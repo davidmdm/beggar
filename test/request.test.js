@@ -12,6 +12,16 @@ const { createServer } = require('./server');
 
 const testingServer = createServer();
 
+const readableToBuffer = readable => {
+  return new Promise((resolve, reject) => {
+    const parts = [];
+    readable
+      .on('data', data => parts.push(data))
+      .on('end', () => resolve(Buffer.concat(parts)))
+      .on('error', reject);
+  });
+};
+
 describe('Tests', () => {
   let baseUri;
 
@@ -55,7 +65,7 @@ describe('Tests', () => {
     });
 
     assert.deepEqual(echoResponse.statusCode, 200);
-    assert.deepEqual(echoResponse.body, 'my test payload');
+    assert.deepEqual(echoResponse.body.toString(), 'my test payload');
   });
 
   it('should send data via options.body (readable)', async () => {
@@ -80,7 +90,7 @@ describe('Tests', () => {
     });
 
     assert.deepEqual(echoResponse.statusCode, 200);
-    assert.deepEqual(echoResponse.body, 'my test payload');
+    assert.deepEqual(echoResponse.body.toString(), 'my test payload');
   });
 
   it('should send data via options.body (buffer)', async () => {
@@ -91,7 +101,7 @@ describe('Tests', () => {
     });
 
     assert.deepEqual(echoResponse.statusCode, 200);
-    assert.deepEqual(echoResponse.body, 'my test payload');
+    assert.deepEqual(echoResponse.body.toString(), 'my test payload');
   });
 
   it('should send data via stream write and end methods', async () => {
@@ -101,7 +111,7 @@ describe('Tests', () => {
 
     const echoResponse = await req;
     assert.deepEqual(echoResponse.statusCode, 200);
-    assert.deepEqual(echoResponse.body, 'my test stream.write payload');
+    assert.deepEqual(echoResponse.body.toString(), 'my test stream.write payload');
   });
 
   it('should pipe data to request', async () => {
@@ -111,7 +121,7 @@ describe('Tests', () => {
 
     const echoResponse = await readable.pipe(request({ method: 'post', uri: baseUri + '/echo' }));
     assert.deepEqual(echoResponse.statusCode, 200);
-    assert.deepEqual(echoResponse.body, 'readable data');
+    assert.deepEqual(echoResponse.body.toString(), 'readable data');
   });
 
   it('should pipe data to request and pipe data from response', async () => {
@@ -337,5 +347,33 @@ describe('Tests', () => {
 
     assert.equal(response.statusCode, 200);
     assert.equal(response.body.request.headers['accept-encoding'], 'application/octet-stream, application/zip');
+  });
+
+  it('should decompress when Content-Encoding is set on response (promises)', async () => {
+    const [decompressed, compressed] = await Promise.all([
+      request.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: true }),
+      request.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: false }),
+    ]);
+
+    assert.equal(decompressed.statusCode, 200);
+    assert.equal(compressed.statusCode, 200);
+
+    assert.equal(decompressed.headers['content-encoding'], 'br,gzip');
+    assert.equal(compressed.headers['content-encoding'], 'br,gzip');
+
+    assert.notEqual(decompressed.body.toString(), compressed.body.toString());
+    assert.equal(decompressed.body.toString(), 'hello world');
+  });
+
+  it('should decompress when Content-Encoding is set on response (streams)', async () => {
+    const [decompressedBuffer, compressedBuffer] = await Promise.all(
+      [
+        request.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: true }),
+        request.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: false }),
+      ].map(readableToBuffer)
+    );
+
+    assert.notEqual(decompressedBuffer.toString(), compressedBuffer.toString());
+    assert.equal(decompressedBuffer.toString(), 'hello world');
   });
 });

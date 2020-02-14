@@ -5,8 +5,15 @@ const http = require('http');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const querystring = require('querystring');
+const zlib = require('zlib');
 
 const { Readable } = require('stream');
+
+const compressions = {
+  gzip: zlib.createGzip,
+  br: zlib.createBrotliCompress,
+  deflate: zlib.createDeflate,
+};
 
 const getAllDataFromReadable = readable => {
   if (!(readable instanceof Readable)) {
@@ -113,6 +120,14 @@ const createServer = () => {
       return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(q));
     }
 
+    if (req.url.startsWith('/compression?')) {
+      const { encodings } = querystring.parse(req.url.slice(13));
+      res.setHeader('Content-Encoding', encodings.split());
+      return encodings
+        .split(/\s*,\s*/)
+        .reduce((acc, enc) => acc.pipe(compressions[enc]()), req)
+        .pipe(res);
+    }
     return res.writeHead(404).end();
   });
 };

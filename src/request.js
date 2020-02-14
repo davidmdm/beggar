@@ -71,15 +71,15 @@ function request(uri, options = {}) {
     })
   );
 
-  const conn = createConnection(req, responsePromise);
+  const conn = createConnection(req, responsePromise, { decompress: options.decompress });
 
   conn.on('finish', () => req.end());
   req.on('error', err => conn.emit('error', err));
+
   responsePromise
     .then(resp => {
       conn.emit('response', resp);
       resp.on('close', () => conn.emit('close'));
-      resp.on('end', () => conn.push(null));
       resp.on('error', err => conn.emit('error', err));
     })
     .catch(err => conn.emit('error', err));
@@ -121,11 +121,9 @@ function request(uri, options = {}) {
         if (!srcPipedToConn) {
           conn.end();
         }
-        const [response, buffer] = await Promise.all([responsePromise, readableToBuffer(conn)]);
-        const responseString = buffer.toString();
-        if (responseString) {
-          response.body = options.json === true ? JSON.parse(responseString) : responseString;
-        }
+        const buffer = await readableToBuffer(conn);
+        const response = await responsePromise;
+        response.body = options.json === true ? JSON.parse(buffer.toString()) : buffer;
         return fn(response);
       })(),
       new Promise((_, reject) => conn.on('error', reject)),
