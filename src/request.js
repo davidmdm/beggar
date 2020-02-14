@@ -4,7 +4,7 @@
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
-const { Duplex, Readable } = require('stream');
+const { Readable } = require('stream');
 
 const qs = require('qs');
 const querystring = require('querystring');
