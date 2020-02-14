@@ -11,6 +11,7 @@ const querystring = require('querystring');
 const FormData = require('form-data');
 
 const { readableToBuffer } = require('./util');
+const { createConnection } = require('./connection');
 
 const httpLib = protocol => {
   switch (protocol) {
@@ -61,28 +62,8 @@ const request = (uri, options = {}) => {
     })
   );
 
-  const conn = new Duplex({
-    read: function() {
-      responsePromise
-        .then(response => {
-          response.once('readable', () => {
-            for (;;) {
-              const chunk = response.read();
-              if (chunk === null) {
-                break;
-              }
-              this.push(chunk);
-            }
-          });
-        })
-        .catch(err => this.emit('error', err));
-    },
-    write: req.write.bind(req),
-  });
+  const conn = createConnection(req, responsePromise);
 
-  let srcPipedToConn = false;
-
-  conn.on('pipe', () => (srcPipedToConn = true));
   conn.on('finish', () => req.end());
   req.on('error', err => conn.emit('error', err));
   responsePromise
@@ -94,6 +75,8 @@ const request = (uri, options = {}) => {
     })
     .catch(err => conn.emit('error', err));
 
+  let srcPipedToConn = false;
+  conn.on('pipe', () => (srcPipedToConn = true));
   const pipe = conn.pipe.bind(conn);
   conn.pipe = (...args) => {
     if (!srcPipedToConn) {

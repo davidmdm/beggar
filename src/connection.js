@@ -14,31 +14,22 @@ function drain(readable, push) {
   });
 }
 
-class Connection extends Duplex {
-  constructor(req, resPromise) {
-    super();
-    this.request = req;
-    this.responsePromise = resPromise;
-    this.response = null;
-    this.push = this.push.bind(this);
-  }
-
-  _read() {
-    if (this.response) {
-      return drain(this.response, this.push);
-    }
-    return this.responsePromise
-      .then(resp => {
-        this.response = resp;
-        this.responsePromise = null;
-        drain(resp, this.push);
-      })
-      .catch(err => this.emit('error', err));
-  }
-
-  _write(chunk, enc, cb) {
-    this.request.write(chunk, enc, cb);
-  }
+function createConnection(req, responsePromise) {
+  let response = null;
+  return new Duplex({
+    read: function() {
+      if (response) {
+        return drain(response, this.push.bind(this));
+      }
+      responsePromise
+        .then(resp => {
+          response = resp;
+          drain(response, this.push.bind(this));
+        })
+        .catch(() => {});
+    },
+    write: req.write.bind(req),
+  });
 }
 
-module.exports = { Connection };
+module.exports = { createConnection };
