@@ -24,7 +24,16 @@
     "pub": "npm i && npm t && rm -rf ./node_modules && npm i --production && npm publish",
     "test": "mocha 'test/**/*test.js' --exit"
   },
-  "keywords": [],
+  "keywords": [
+    "http",
+    "request",
+    "client"
+  ],
+  "homepage": "https://github.com/davidmdm/beggar#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davidmdm/beggar.git"
+  },
   "author": "",
   "license": "ISC"
 }
