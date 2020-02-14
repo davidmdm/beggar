@@ -1,4 +1,3 @@
-//@ts-nocheck
 'use strict';
 
 const assert = require('assert');
@@ -27,6 +26,7 @@ describe('Tests', () => {
 
   before(async () => {
     await new Promise(resolve => testingServer.listen(0, resolve));
+    //@ts-ignore
     baseUri = 'http://localhost:' + testingServer.address().port;
   });
 
@@ -375,5 +375,16 @@ describe('Tests', () => {
 
     assert.notEqual(decompressedBuffer.toString(), compressedBuffer.toString());
     assert.equal(decompressedBuffer.toString(), 'hello world');
+  });
+
+  it('should throw an error if options.json is true but response is not json', async () => {
+    await assert.rejects(
+      request.post({
+        uri: baseUri + '/echo',
+        body: 'hello world',
+        json: true,
+      }),
+      { message: 'Content-Type is undefined, expected application/json' }
+    );
   });
 });

@@ -24,10 +24,8 @@ export declare type ResolvedResponse = IncomingMessage & {
   body: any;
   redirects?: string[];
 };
-export declare type Connection = Duplex & {
-  then: <T>(fn: (response: ResolvedResponse) => T) => Promise<T>;
-  catch: <T>(handle: (err: Error) => T) => Promise<ResolvedResponse | T>;
-};
+export declare type Connection = Duplex & Promise<ResolvedResponse>;
+
 declare type RequestOptionsWithoutMethod = Omit<RequestOptions, 'method'>;
 declare type RequestFn = {
   (options: RequestOptions): Connection;

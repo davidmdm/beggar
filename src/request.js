@@ -4,6 +4,7 @@
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
+const { format } = require('util');
 const { Readable } = require('stream');
 
 const qs = require('qs');
@@ -121,8 +122,11 @@ function request(uri, options = {}) {
         if (!srcPipedToConn) {
           conn.end();
         }
-        const buffer = await readableToBuffer(conn);
         const response = await responsePromise;
+        if (options.json === true && !(response.headers['content-type'] || '').includes('application/json')) {
+          throw new Error(format('Content-Type is %s, expected application/json', response.headers['content-type']));
+        }
+        const buffer = await readableToBuffer(conn);
         response.body = options.json === true ? JSON.parse(buffer.toString()) : buffer;
         return fn(response);
       })(),
