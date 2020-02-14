@@ -47,11 +47,47 @@ describe('Tests', () => {
     assert.equal(homepageResponse.body, 'Welcome to the homepage');
   });
 
-  it('should send data via options.body', async () => {
+  it('should send data via options.body (string)', async () => {
     const echoResponse = await request({
       method: 'post',
       uri: baseUri + '/echo',
       body: 'my test payload',
+    });
+
+    assert.deepEqual(echoResponse.statusCode, 200);
+    assert.deepEqual(echoResponse.body, 'my test payload');
+  });
+
+  it('should send data via options.body (readable)', async () => {
+    let readableDone = false;
+    const readable = new Readable({
+      read() {
+        setTimeout(() => {
+          if (readableDone) {
+            this.push(null);
+          } else {
+            this.push('my test payload');
+            readableDone = true;
+          }
+        }, 25);
+      },
+    });
+
+    const echoResponse = await request({
+      method: 'post',
+      uri: baseUri + '/echo',
+      body: readable,
+    });
+
+    assert.deepEqual(echoResponse.statusCode, 200);
+    assert.deepEqual(echoResponse.body, 'my test payload');
+  });
+
+  it('should send data via options.body (buffer)', async () => {
+    const echoResponse = await request({
+      method: 'post',
+      uri: baseUri + '/echo',
+      body: Buffer.from('my test payload'),
     });
 
     assert.deepEqual(echoResponse.statusCode, 200);

@@ -4,7 +4,7 @@
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
-const { Duplex } = require('stream');
+const { Duplex, Readable } = require('stream');
 
 const qs = require('qs');
 const querystring = require('querystring');
@@ -61,7 +61,7 @@ const request = (uri, options = {}) => {
     })
   );
 
-  const duplex = new Duplex({
+  const conn = new Duplex({
     read: function() {
       responsePromise
         .then(response => {
@@ -80,61 +80,63 @@ const request = (uri, options = {}) => {
     write: req.write.bind(req),
   });
 
-  let srcPipedToDuplex = false;
+  let srcPipedToConn = false;
 
-  duplex.on('pipe', () => (srcPipedToDuplex = true));
-  duplex.on('finish', () => req.end());
-  req.on('error', err => duplex.emit('error', err));
+  conn.on('pipe', () => (srcPipedToConn = true));
+  conn.on('finish', () => req.end());
+  req.on('error', err => conn.emit('error', err));
   responsePromise
     .then(resp => {
-      duplex.emit('response', resp);
-      resp.on('close', () => duplex.emit('close'));
-      resp.on('end', () => duplex.push(null));
-      resp.on('error', err => duplex.emit('error', err));
+      conn.emit('response', resp);
+      resp.on('close', () => conn.emit('close'));
+      resp.on('end', () => conn.push(null));
+      resp.on('error', err => conn.emit('error', err));
     })
-    .catch(err => duplex.emit('error', err));
+    .catch(err => conn.emit('error', err));
 
-  const pipe = duplex.pipe.bind(duplex);
-  duplex.pipe = (...args) => {
-    if (!srcPipedToDuplex) {
-      duplex.end();
+  const pipe = conn.pipe.bind(conn);
+  conn.pipe = (...args) => {
+    if (!srcPipedToConn) {
+      conn.end();
     }
     return pipe(...args);
   };
 
   if (!options.method || options.method.toLowerCase() === 'get') {
-    duplex.end();
-  } else if (typeof options.body === 'object') {
+    conn.end();
+  } else if (typeof options.body === 'string' || options.body instanceof Buffer) {
+    conn.end(options.body);
+  } else if (options.body instanceof Readable && options.body._readableState.objectMode === false) {
+    options.body.pipe(conn);
+  } else if (options.body !== undefined) {
     req.setHeader('Content-Type', 'application/json');
-    duplex.end(JSON.stringify(options.body));
-  } else if (options.body) {
-    duplex.end(options.body);
+    conn.end(JSON.stringify(options.body));
   } else if (options.form) {
     req.setHeader('Content-Type', 'application/x-www-form-urlencoded');
-    duplex.end(qs.stringify(options.form));
+    conn.end(qs.stringify(options.form));
   } else if (options.formData) {
     const form = new FormData();
     for (const [key, value] of Object.entries(options.formData)) {
       form.append(key, value, { filename: key });
     }
     req.setHeader('Content-Type', 'multipart/form-data;boundary=' + form.getBoundary());
-    form.pipe(duplex);
+    form.pipe(conn);
   }
 
-  duplex.then = (fn, handle) => {
+  conn.then = (fn, handle) => {
     const promise = Promise.race([
       (async () => {
-        if (!srcPipedToDuplex) {
-          duplex.end();
+        if (!srcPipedToConn) {
+          conn.end();
         }
-        const [response, buffer] = await Promise.all([responsePromise, readableToBuffer(duplex)]);
+        const [response, buffer] = await Promise.all([responsePromise, readableToBuffer(conn)]);
         const responseString = buffer.toString();
         if (responseString) {
           response.body = options.json === true ? JSON.parse(responseString) : responseString;
         }
         return fn(response);
       })(),
-      new Promise((_, reject) => duplex.on('error', reject)),
+      new Promise((_, reject) => conn.on('error', reject)),
     ]);
     if (handle) {
       return promise.catch(handle);
@@ -142,11 +144,11 @@ const request = (uri, options = {}) => {
     return promise;
   };
 
-  duplex.catch = handle => {
-    return duplex.then(x => x, handle);
+  conn.catch = handle => {
+    return conn.then(x => x, handle);
   };
 
-  return duplex;
+  return conn;
 };
 
 for (const method of http.METHODS) {

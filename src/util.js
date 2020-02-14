@@ -1,11 +1,11 @@
 'use strict';
 
-const readableToBuffer = readable => {
+const readableToBuffer = async readable => {
   return new Promise((resolve, reject) => {
-    let buffer = Buffer.from([]);
+    const parts = [];
     readable
-      .on('data', data => (buffer = Buffer.concat([buffer, data])))
-      .on('end', () => resolve(buffer))
+      .on('data', data => parts.push(data))
+      .on('end', () => resolve(Buffer.concat(parts)))
       .on('error', reject);
   });
 };
