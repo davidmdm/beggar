@@ -10,7 +10,6 @@ const qs = require('qs');
 const querystring = require('querystring');
 const FormData = require('form-data');
 
-const { readableToBuffer } = require('./util');
 const { createConnection } = require('./connection');
 
 const httpLib = protocol => {
@@ -24,7 +23,17 @@ const httpLib = protocol => {
   }
 };
 
-const request = (uri, options = {}) => {
+const readableToBuffer = readable => {
+  return new Promise((resolve, reject) => {
+    const parts = [];
+    readable
+      .on('data', data => parts.push(data))
+      .on('end', () => resolve(Buffer.concat(parts)))
+      .on('error', reject);
+  });
+};
+
+function request(uri, options = {}) {
   if (typeof uri === 'string' || uri instanceof URL) {
     options.uri = uri;
   } else {
@@ -132,7 +141,7 @@ const request = (uri, options = {}) => {
   };
 
   return conn;
-};
+}
 
 for (const method of http.METHODS) {
   request[method.toLowerCase()] = (uri, options = {}) => {

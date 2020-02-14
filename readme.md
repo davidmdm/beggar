@@ -152,8 +152,10 @@ const response = await request;
 There are some things that could be improved upon. A few that come to mind:
 
 - multi-part formdata options
-- max redirects
+- redirect options
 - proxy support
+- cookie support
+- providing custom agent
 - perhaps utility functions that bypass returning a response object all together
   ```javascript
   const obj = await request.get(uri).asJSON();
