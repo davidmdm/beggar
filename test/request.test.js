@@ -397,4 +397,15 @@ describe('Tests', () => {
       { message: 'Content-Type is undefined, expected application/json' }
     );
   });
+
+  it('should send request with correct method when using request[method](string|URL) syntax', async () => {
+    const put = await request.put(baseUri + '/details', { json: true });
+    const post = await request.post(new URL(baseUri + '/details'), { json: true });
+    assert.equal(put.body.request.method, 'PUT');
+    assert.equal(post.body.request.method, 'POST');
+  });
+  it('should user method helper function and ignore options.method', async () => {
+    const put = await request.put(baseUri + '/details', { method: 'get', json: true });
+    assert.equal(put.body.request.method, 'PUT');
+  });
 });

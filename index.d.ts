@@ -21,52 +21,51 @@ export declare type RequestOptions = {
   formData?: Dictionary<string | Buffer | Readable>;
   decompress?: boolean;
 };
+
+type RequestOptionsWithoutUri = Omit<RequestOptions, 'uri'>;
+
 export declare type ResolvedResponse<T> = IncomingMessage & {
   body: T;
   redirects?: string[];
 };
 export declare type Connection<T> = Duplex & Promise<ResolvedResponse<T>>;
 
-declare type RequestOptionsWithoutMethod = Omit<RequestOptions, 'method'>;
-
 export declare const request: {
   <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-  <T extends RequestOptionsWithoutMethod>(uri: string | URL | T, options?: Omit<T, 'uri'>): Connection<
-    T extends JsonOption ? any : Buffer
-  >;
+  <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<T extends JsonOption ? any : Buffer>;
   get: {
-    <T extends RequestOptionsWithoutMethod>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutMethod>(uri: string | URL | T, options?: Omit<T, 'uri'>): Connection<
+    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
+    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
       T extends JsonOption ? any : Buffer
     >;
   };
   post: {
-    <T extends RequestOptionsWithoutMethod>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutMethod>(uri: string | URL | T, options?: Omit<T, 'uri'>): Connection<
+    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
+    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
       T extends JsonOption ? any : Buffer
     >;
   };
   put: {
-    <T extends RequestOptionsWithoutMethod>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutMethod>(uri: string | URL | T, options?: Omit<T, 'uri'>): Connection<
+    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
+    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
       T extends JsonOption ? any : Buffer
     >;
   };
   patch: {
-    <T extends RequestOptionsWithoutMethod>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutMethod>(uri: string | URL | T, options?: Omit<T, 'uri'>): Connection<
+    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
+    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
       T extends JsonOption ? any : Buffer
     >;
   };
   head: {
-    <T extends RequestOptionsWithoutMethod>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutMethod>(uri: string | URL | T, options?: Omit<T, 'uri'>): Connection<
+    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
+    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
       T extends JsonOption ? any : Buffer
     >;
   };
   delete: {
-    <T extends RequestOptionsWithoutMethod>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutMethod>(uri: string | URL | T, options?: Omit<T, 'uri'>): Connection<
+    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
+    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
       T extends JsonOption ? any : Buffer
     >;
   };
