@@ -344,9 +344,19 @@ describe('Tests', () => {
       headers: { 'Accept-Encoding': ['application/octet-stream', 'application/zip'] },
       json: true,
     });
-
     assert.equal(response.statusCode, 200);
     assert.equal(response.body.request.headers['accept-encoding'], 'application/octet-stream, application/zip');
+  });
+
+  it('should send request with options.body with a content-type of application/json', async () => {
+    const response = await request.put({
+      uri: baseUri + '/details',
+      body: { hello: 'world' },
+      json: true,
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.request.headers['content-type'], 'application/json');
+    assert.equal(response.body.request.body, '{"hello":"world"}');
   });
 
   it('should decompress when Content-Encoding is set on response (promises)', async () => {
