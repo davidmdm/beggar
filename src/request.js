@@ -147,7 +147,7 @@ function request(uri, options = {}) {
 
 for (const method of http.METHODS) {
   request[method.toLowerCase()] = (uri, options = {}) => {
-    if (typeof uri === 'string') {
+    if (typeof uri === 'string' || uri instanceof URL) {
       options.method = method;
     } else {
       uri.method = method;
