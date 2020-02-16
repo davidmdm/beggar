@@ -20,14 +20,14 @@ const applyDecompression = response => {
     .reduceRight((acc, enc) => acc.pipe(decompressions[enc]()), response);
 };
 
-function drain(readable, push) {
-  readable.once('readable', () => {
+function drain(src, dst) {
+  src.once('readable', () => {
     for (;;) {
-      const chunk = readable.read();
+      const chunk = src.read();
       if (chunk === null) {
         break;
       }
-      push(chunk);
+      dst.push(chunk);
     }
   });
 }
@@ -38,9 +38,9 @@ function createConnection(req, options) {
   const conn = new Duplex({
     read: function() {
       if (!source) {
-        return this.once('source', () => drain(source, this.push.bind(this)));
+        return this.once('source', () => drain(source, this));
       }
-      return drain(source, this.push.bind(this));
+      return drain(source, this);
     },
     write: req.write.bind(req),
   })
