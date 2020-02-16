@@ -32,13 +32,22 @@ const createProxiedConnection = (url, options) => {
   const proxyHost = format('%s:%s', hostname, port || (protocol === 'https:' ? 443 : 80));
   const proxyAuth = username && password && 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
 
+  console.log('STARTING PROXY REQ');
+
+  console.log({
+    hostname,
+    protocol,
+    port,
+    pathname: '/' + url.hostname + ':' + (url.port || (url.protocol === 'https:' ? 443 : 80)),
+  });
+
   httpLib(protocol)
     .request(
       new URL({
         hostname,
         protocol,
         port,
-        path: proxyHost,
+        pathname: '/' + url.hostname + ':' + (url.port || (url.protocol === 'https:' ? 443 : 80)),
       }),
       {
         method: 'CONNECT',
@@ -50,6 +59,7 @@ const createProxiedConnection = (url, options) => {
       }
     )
     .on('connect', (_, socket) => {
+      console.log('I CONNECTED');
       const req = httpLib(url.protocol)
         .request({
           method: options.method && options.method.toUpperCase(),
