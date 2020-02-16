@@ -32,23 +32,37 @@ function drain(readable, push) {
   });
 }
 
-function createConnection(req, responsePromise, options) {
+function createConnection(req, options) {
   let source = null;
-  return new Duplex({
+
+  const conn = new Duplex({
     read: function() {
-      if (source) {
-        return drain(source, this.push.bind(this));
+      if (!source) {
+        return this.once('source', () => drain(source, this.push.bind(this)));
       }
-      responsePromise
-        .then(resp => {
-          source = options.decompress !== false ? applyDecompression(resp) : resp;
-          source.on('end', () => this.push(null));
-          drain(source, this.push.bind(this));
-        })
-        .catch(() => {});
+      return drain(source, this.push.bind(this));
     },
     write: req.write.bind(req),
-  });
+  })
+    .on('response', function(resp) {
+      source = options.decompress !== false ? applyDecompression(resp) : resp;
+      source.on('end', () => this.push(null));
+      this.emit('source');
+    })
+    .on('finish', () => req.end())
+    .on('pipe', function() {
+      this.isPipedTo = true;
+    });
+
+  const pipe = conn.pipe.bind(conn);
+  conn.pipe = (...args) => {
+    if (!conn.isPipedTo) {
+      conn.end();
+    }
+    return pipe(...args);
+  };
+
+  return conn;
 }
 
 module.exports = { createConnection };

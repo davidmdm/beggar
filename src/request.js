@@ -53,6 +53,7 @@ function request(uri, options = {}) {
     method: options.method && options.method.toUpperCase(),
     headers: options.headers,
     auth: options.auth && options.auth.user + ':' + options.auth.pass,
+    agent: options.agent,
   });
 
   const responsePromise = new Promise((resolve, reject) =>
@@ -72,9 +73,7 @@ function request(uri, options = {}) {
     })
   );
 
-  const conn = createConnection(req, responsePromise, { decompress: options.decompress });
-
-  conn.on('finish', () => req.end());
+  const conn = createConnection(req, { decompress: options.decompress });
   req.on('error', err => conn.emit('error', err));
 
   responsePromise
@@ -84,16 +83,6 @@ function request(uri, options = {}) {
       resp.on('error', err => conn.emit('error', err));
     })
     .catch(err => conn.emit('error', err));
-
-  let srcPipedToConn = false;
-  conn.on('pipe', () => (srcPipedToConn = true));
-  const pipe = conn.pipe.bind(conn);
-  conn.pipe = (...args) => {
-    if (!srcPipedToConn) {
-      conn.end();
-    }
-    return pipe(...args);
-  };
 
   if (!options.method || options.method.toLowerCase() === 'get') {
     conn.end();
@@ -119,7 +108,7 @@ function request(uri, options = {}) {
   conn.then = (fn, handle) => {
     const promise = Promise.race([
       (async () => {
-        if (!srcPipedToConn) {
+        if (!conn.isPipedTo) {
           conn.end();
         }
         const response = await responsePromise;
