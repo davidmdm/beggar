@@ -1,5 +1,6 @@
 'use strict';
 
+const { format } = require('util');
 const { Duplex } = require('stream');
 
 const zlib = require('zlib');
@@ -10,7 +11,7 @@ const decompressions = {
   br: zlib.createBrotliDecompress,
 };
 
-const applyDecompression = response => {
+function applyDecompression(response) {
   if (!response.headers['content-encoding']) {
     return response;
   }
@@ -18,7 +19,7 @@ const applyDecompression = response => {
     .split(/\s*,\s*/)
     .filter(enc => enc && enc !== 'identity')
     .reduceRight((acc, enc) => acc.pipe(decompressions[enc]()), response);
-};
+}
 
 function drain(src, dst) {
   src.once('readable', () => {
@@ -32,37 +33,86 @@ function drain(src, dst) {
   });
 }
 
-function createConnection(req, options) {
-  let source = null;
+function readableToBuffer(readable) {
+  return new Promise((resolve, reject) => {
+    const parts = [];
+    readable
+      .on('data', data => parts.push(data))
+      .on('end', () => resolve(Buffer.concat(parts)))
+      .on('error', reject);
+  });
+}
 
-  const conn = new Duplex({
-    read: function() {
-      if (!source) {
-        return this.once('source', () => drain(source, this));
+class Connection extends Duplex {
+  constructor(dst, opts) {
+    super();
+    this.dst = dst;
+    this.opts = opts;
+    this.source = null;
+    this.incomingMessage = null;
+
+    const pipe = this.pipe.bind(this);
+    this.isPipedTo = false;
+
+    this.pipe = (...args) => {
+      if (!this.isPipedTo) {
+        this.end();
       }
-      return drain(source, this);
-    },
-    write: req.write.bind(req),
-  })
-    .on('response', function(resp) {
-      source = options.decompress !== false ? applyDecompression(resp) : resp;
-      source.on('end', () => this.push(null));
-      this.emit('source');
+      return pipe(...args);
+    };
+
+    this.once('response', response => {
+      this.incomingMessage = response;
+      this.source = opts.decompress !== false ? applyDecompression(response) : response;
+      this.source.on('end', () => this.push(null));
+      this.emit('_source_');
     })
-    .on('finish', () => req.end())
-    .on('pipe', function() {
-      this.isPipedTo = true;
-    });
+      .once('finish', () => {
+        this.dst.end();
+      })
+      .once('pipe', () => (this.isPipedTo = true));
+  }
 
-  const pipe = conn.pipe.bind(conn);
-  conn.pipe = (...args) => {
-    if (!conn.isPipedTo) {
-      conn.end();
+  _read() {
+    if (!this.source) {
+      return this.once('_source_', () => drain(this.source, this));
     }
-    return pipe(...args);
-  };
+    drain(this.source, this);
+  }
 
-  return conn;
+  _write(chunk, enc, cb) {
+    this.dst.write(chunk, enc, cb);
+  }
+
+  then(fn, handle) {
+    const promise = Promise.race([
+      (async () => {
+        if (!this.isPipedTo) {
+          this.end();
+        }
+        const response = this.incomingMessage || (await new Promise(resolve => this.once('response', resolve)));
+        if (this.opts.json === true && !(response.headers['content-type'] || '').includes('application/json')) {
+          throw new Error(format('Content-Type is %s, expected application/json', response.headers['content-type']));
+        }
+        const buffer = await readableToBuffer(this);
+        response.body = this.opts.json === true ? JSON.parse(buffer.toString()) : buffer;
+        return fn(response);
+      })(),
+      new Promise((_, reject) => this.on('error', reject)),
+    ]);
+    if (handle) {
+      return promise.catch(handle);
+    }
+    return promise;
+  }
+
+  catch(handle) {
+    return this.then(x => x, handle);
+  }
+}
+
+function createConnection(req, options) {
+  return new Connection(req, options);
 }
 
 module.exports = { createConnection };
