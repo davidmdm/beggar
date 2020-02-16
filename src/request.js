@@ -24,16 +24,6 @@ const httpLib = protocol => {
   }
 };
 
-const readableToBuffer = readable => {
-  return new Promise((resolve, reject) => {
-    const parts = [];
-    readable
-      .on('data', data => parts.push(data))
-      .on('end', () => resolve(Buffer.concat(parts)))
-      .on('error', reject);
-  });
-};
-
 function request(uri, options = {}) {
   if (typeof uri === 'string' || uri instanceof URL) {
     options.uri = uri;
@@ -118,7 +108,7 @@ function request(uri, options = {}) {
     })
   );
 
-  const conn = createConnection(req, { decompress: options.decompress });
+  const conn = createConnection(req, options);
   req.on('error', err => conn.emit('error', err));
 
   responsePromise
@@ -149,32 +139,6 @@ function request(uri, options = {}) {
     req.setHeader('Content-Type', 'multipart/form-data;boundary=' + form.getBoundary());
     form.pipe(conn);
   }
-
-  conn.then = (fn, handle) => {
-    const promise = Promise.race([
-      (async () => {
-        if (!conn.isPipedTo) {
-          conn.end();
-        }
-        const response = await responsePromise;
-        if (options.json === true && !(response.headers['content-type'] || '').includes('application/json')) {
-          throw new Error(format('Content-Type is %s, expected application/json', response.headers['content-type']));
-        }
-        const buffer = await readableToBuffer(conn);
-        response.body = options.json === true ? JSON.parse(buffer.toString()) : buffer;
-        return fn(response);
-      })(),
-      new Promise((_, reject) => conn.on('error', reject)),
-    ]);
-    if (handle) {
-      return promise.catch(handle);
-    }
-    return promise;
-  };
-
-  conn.catch = handle => {
-    return conn.then(x => x, handle);
-  };
 
   return conn;
 }
