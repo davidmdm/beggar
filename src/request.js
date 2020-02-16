@@ -5,7 +5,7 @@ const http = require('http');
 const https = require('https');
 const { URL } = require('url');
 const { format } = require('util');
-const { Readable } = require('stream');
+const { Readable, PassThrough } = require('stream');
 
 const qs = require('qs');
 const querystring = require('querystring');
@@ -47,6 +47,51 @@ function request(uri, options = {}) {
     url.search = qs.stringify({ ...Object.fromEntries(url.searchParams), ...options.qs });
   } else if (options.query) {
     url.search = querystring.stringify({ ...Object.fromEntries(url.searchParams), ...options.query });
+  }
+
+  if (options.proxy) {
+    const passthrough = new PassThrough();
+    const conn = createConnection(passthrough, { decompress: options.decompress });
+
+    const { hostname, port, protocol, username, password } = new URL(options.proxy);
+    const proxyHost = format('%s:%s', hostname, port || (protocol === 'https:' ? 443 : 80));
+    const proxyAuth = username && password && 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
+
+    httpLib(protocol)
+      .request(
+        new URL({
+          hostname,
+          protocol,
+          port,
+          path: proxyHost,
+        }),
+        {
+          method: 'CONNECT',
+          headers: {
+            ...options.headers,
+            Host: proxyHost,
+            'Proxy-Authorization': proxyAuth || undefined,
+          },
+        }
+      )
+      .on('connect', (_, socket) => {
+        passthrough.pipe(
+          httpLib(url.protocol)
+            .request({
+              method: options.method && options.method.toUpperCase(),
+              headers: options.headers,
+              auth: options.auth && options.auth.user + ':' + options.auth.pass,
+              agent: null,
+              createConnection: () => socket,
+            })
+            .on('error', err => conn.emit('error', err))
+            .on('response', response => {
+              response.on('error', err => conn.emit('error', err));
+              response.on('close', () => conn.emit('close'));
+              conn.emit('response', response);
+            })
+        );
+      });
   }
 
   const req = httpLib(url.protocol).request(url, {
