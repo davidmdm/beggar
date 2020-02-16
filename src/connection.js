@@ -50,6 +50,8 @@ class Connection extends Duplex {
     this.opts = opts;
     this.source = null;
     this.incomingMessage = null;
+    this.outgoingMessage = null;
+    this.outgoingHeaders = {};
 
     const pipe = this.pipe.bind(this);
     this.isPipedTo = false;
@@ -67,6 +69,12 @@ class Connection extends Duplex {
       this.source.on('end', () => this.push(null));
       this.emit('_source_');
     })
+      .once('request', request => {
+        this.outgoingMessage = request;
+        for (const [name, value] of Object.entries(this.outgoingHeaders)) {
+          this.outgoingMessage.setHeader(name, value);
+        }
+      })
       .once('finish', () => {
         this.dst.end();
       })
@@ -82,6 +90,13 @@ class Connection extends Duplex {
 
   _write(chunk, enc, cb) {
     this.dst.write(chunk, enc, cb);
+  }
+
+  setHeader(name, value) {
+    this.outgoingHeaders[name] = value;
+    if (this.outgoingMessage) {
+      this.outgoingMessage.setHeader(name, value);
+    }
   }
 
   then(fn, handle) {
@@ -111,8 +126,4 @@ class Connection extends Duplex {
   }
 }
 
-function createConnection(req, options) {
-  return new Connection(req, options);
-}
-
-module.exports = { createConnection };
+module.exports = { Connection };
