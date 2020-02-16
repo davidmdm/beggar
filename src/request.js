@@ -4,7 +4,6 @@
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
-const { format } = require('util');
 const { Readable } = require('stream');
 
 const qs = require('qs');
@@ -22,16 +21,6 @@ const httpLib = protocol => {
     default:
       throw new Error('protocol not supported');
   }
-};
-
-const readableToBuffer = readable => {
-  return new Promise((resolve, reject) => {
-    const parts = [];
-    readable
-      .on('data', data => parts.push(data))
-      .on('end', () => resolve(Buffer.concat(parts)))
-      .on('error', reject);
-  });
 };
 
 function request(uri, options = {}) {
