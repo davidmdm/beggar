@@ -3,8 +3,10 @@
 
 const http = require('http');
 const https = require('https');
+const tls = require('tls');
+
+const util = require('util');
 const { URL } = require('url');
-const { format } = require('util');
 const { Readable, PassThrough } = require('stream');
 
 const qs = require('qs');
@@ -12,6 +14,16 @@ const querystring = require('querystring');
 const FormData = require('form-data');
 
 const { Connection } = require('./connection');
+
+const version = require('../package.json').version;
+
+const defaultUserAgent = util.format(
+  'Beggar/%s (Node.js %s; %s %s)',
+  version,
+  process.version,
+  process.platform,
+  process.arch
+);
 
 const httpLib = protocol => {
   switch (protocol) {
@@ -24,49 +36,45 @@ const httpLib = protocol => {
   }
 };
 
-const createProxiedConnection = (url, options) => {
+const createProxiedConnection = (uri, options) => {
   const passthrough = new PassThrough();
   const conn = new Connection(passthrough, options);
 
+  const targetProtocol = uri.protocol;
+  const targetHost = util.format(
+    '%s:%s',
+    options.uri.hostname,
+    options.uri.port || (targetProtocol === 'https:' ? 443 : 80)
+  );
   const { hostname, port, protocol, username, password } = new URL(options.proxy);
-  const proxyHost = format('%s:%s', hostname, port || (protocol === 'https:' ? 443 : 80));
   const proxyAuth = username && password && 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
 
-  console.log('STARTING PROXY REQ');
-
-  console.log({
-    hostname,
-    protocol,
-    port,
-    pathname: '/' + url.hostname + ':' + (url.port || (url.protocol === 'https:' ? 443 : 80)),
-  });
-
   httpLib(protocol)
-    .request(
-      new URL({
-        hostname,
-        protocol,
-        port,
-        pathname: '/' + url.hostname + ':' + (url.port || (url.protocol === 'https:' ? 443 : 80)),
-      }),
-      {
-        method: 'CONNECT',
-        headers: {
-          ...options.headers,
-          Host: proxyHost,
-          'Proxy-Authorization': proxyAuth || undefined,
-        },
-      }
-    )
-    .on('connect', (_, socket) => {
-      console.log('I CONNECTED');
-      const req = httpLib(url.protocol)
-        .request({
+    .request({
+      host: hostname,
+      port: port && Number(port),
+      headers: {
+        host: targetHost,
+        'User-Agent': (options.headers && options.headers['user-agent']) || defaultUserAgent,
+        'Proxy-Authorization': proxyAuth || undefined,
+      },
+      method: 'CONNECT',
+      path: targetHost,
+      agent: false,
+    })
+    .on('connect', function(_, socket) {
+      const req = httpLib(targetProtocol)
+        .request(uri, {
           method: options.method && options.method.toUpperCase(),
-          headers: options.headers,
+          headers: { 'User-Agent': defaultUserAgent, ...options.headers },
           auth: options.auth && options.auth.user + ':' + options.auth.pass,
           agent: null,
-          createConnection: () => socket,
+          createConnection: () => {
+            if (targetProtocol !== 'https:') {
+              return socket;
+            }
+            return tls.connect(0, { servername: uri.host, socket }, () => {});
+          },
         })
         .on('error', err => conn.emit('error', err))
         .on('response', response => {
@@ -76,15 +84,16 @@ const createProxiedConnection = (url, options) => {
         });
       conn.emit('request', req);
       passthrough.pipe(req);
-    });
+    })
+    .end();
 
   return conn;
 };
 
-const createConnection = (url, options) => {
-  const req = httpLib(url.protocol).request(url, {
+const createConnection = (uri, options) => {
+  const req = httpLib(uri.protocol).request(uri, {
     method: options.method && options.method.toUpperCase(),
-    headers: options.headers,
+    headers: { 'User-Agent': defaultUserAgent, ...options.headers },
     auth: options.auth && options.auth.user + ':' + options.auth.pass,
     agent: options.agent,
   });
@@ -93,7 +102,7 @@ const createConnection = (url, options) => {
     req.on('response', resp => {
       if (options.followRedirects && resp.statusCode >= 301 && resp.statusCode <= 303) {
         const location = resp.headers.location;
-        const qualifiedRedirection = location.startsWith('/') ? url.origin + location : location;
+        const qualifiedRedirection = location.startsWith('/') ? uri.origin + location : location;
         return request
           .get(qualifiedRedirection, { followRedirects: true, json: options.json })
           .on('response', nextResp => {
@@ -128,7 +137,8 @@ function request(uri, options = {}) {
     options = uri;
   }
 
-  const url = new URL(options.uri);
+  options.uri = new URL(options.uri);
+  const url = options.uri;
 
   if (options.qs) {
     url.search = qs.stringify({ ...Object.fromEntries(url.searchParams), ...options.qs });
