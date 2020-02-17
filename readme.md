@@ -4,7 +4,7 @@
 
 ## Preamble
 
-Beggar is heavily inspired by mikael's request module.
+Beggar is heavily inspired by mikael's [request](https://www.npmjs.com/package/request) module.
 
 Every other http client library I tried always left me wanting and I would always come back to request.
 In my opinion, what request did better than any other http client library was its stream interface.
@@ -79,6 +79,11 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
    `object` same as `options.qs` but will use the NodeJS native querystring module.
 - decompress  
    `boolean` by default true. Will decompress encodings br,gzip, and deflate. Set to false to get raw buffer
+- agent    
+   `http.Agent` or `false`, will be passed to underlying NodeJS ClientRequest
+- proxy     
+    `string` or `URL` of the proxy server. This feature is currently _<span style="color: yellow;">experimental</span>_ and as such has not been thoroughly tested.
+  
 
 The request function supports two signatures:
 
@@ -127,10 +132,14 @@ req.on('response', response => {
 Using the stream interface (same as Mikael's request)
 
 ```javascript
-request
-  .get('http://example.com/file.txt')
-  .pipe(request.post('http://bucket.com/upload'))
-  .pipe(myWritable);
+// It is best to use pipeline to assure that streams get closed properly on error. For simplicity in other examples we shall use the readable pipe method.
+pipeline(
+  request.get('http://example.com/file.txt'),
+  request.post('http://bucket.com/upload'),
+  fs.createWriteStream('./response.json'),
+  err => { ... }
+)
+  
 ```
 
 Using promises and `async/await`
@@ -158,9 +167,8 @@ There are some things that could be improved upon. A few that come to mind:
 
 - multi-part formdata options
 - redirect options
-- proxy support
-- cookie support
-- providing custom agent
+- proxy support (tesing and TLS options)
+- cookie support (if requested)
 - perhaps utility functions that bypass returning a response object all together
   ```javascript
   const obj = await request.get(uri).asJSON();
