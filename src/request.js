@@ -167,15 +167,20 @@ function request(uri, options = {}) {
   if (!options.method || options.method.toLowerCase() === 'get') {
     conn.end();
   } else if (typeof options.body === 'string' || options.body instanceof Buffer) {
+    conn.setHeader('Content-Length', options.body.length);
     conn.end(options.body);
   } else if (options.body instanceof Readable && options.body._readableState.objectMode === false) {
     options.body.pipe(conn);
   } else if (options.body !== undefined) {
+    const payload = JSON.stringify(options.body);
     conn.setHeader('Content-Type', 'application/json');
-    conn.end(JSON.stringify(options.body));
+    conn.setHeader('Content-Length', payload.length);
+    conn.end(payload);
   } else if (options.form) {
+    const payload = qs.stringify(options.form);
     conn.setHeader('Content-Type', 'application/x-www-form-urlencoded');
-    conn.end(qs.stringify(options.form));
+    conn.setHeader('Content-Length', payload.length);
+    conn.end(payload);
   } else if (options.formData) {
     const form = new FormData();
     for (const [key, value] of Object.entries(options.formData)) {
