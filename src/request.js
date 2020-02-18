@@ -89,6 +89,7 @@ const createProxiedConnection = options => {
       conn.emit('request', req);
       passthrough.pipe(req);
     })
+    .on('error', err => conn.emit('error', err))
     .end();
 
   return conn;

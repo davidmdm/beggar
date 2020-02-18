@@ -53,9 +53,8 @@ class Connection extends Duplex {
     this.outgoingMessage = null;
     this.outgoingHeaders = {};
 
-    const pipe = this.pipe.bind(this);
+    const pipe = Duplex.prototype.pipe.bind(this);
     this.isPipedTo = false;
-
     this.pipe = (...args) => {
       if (!this.isPipedTo) {
         this.end();
@@ -75,9 +74,7 @@ class Connection extends Duplex {
           this.outgoingMessage.setHeader(name, value);
         }
       })
-      .once('finish', () => {
-        this.dst.end();
-      })
+      .once('finish', () => this.dst.end())
       .once('pipe', () => (this.isPipedTo = true));
   }
 
@@ -113,7 +110,7 @@ class Connection extends Duplex {
         response.body = this.opts.json === true ? JSON.parse(buffer.toString()) : buffer;
         return fn(response);
       })(),
-      new Promise((_, reject) => this.on('error', reject)),
+      new Promise((_, reject) => this.once('error', reject)),
     ]);
     if (handle) {
       return promise.catch(handle);
