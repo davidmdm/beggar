@@ -73,12 +73,11 @@ const createProxiedConnection = options => {
           method: options.method && options.method.toUpperCase(),
           headers: { 'User-Agent': defaultUserAgent, ...options.headers },
           auth: options.auth && options.auth.user + ':' + options.auth.pass,
-          agent: null,
           createConnection: () => {
-            if (options.uri.protocol !== 'https:') {
+            if (options.uri.protocol === 'http:') {
               return socket;
             }
-            return tls.connect(0, { servername: options.uri.host, socket }, () => {});
+            return tls.connect(0, { servername: options.uri.host, socket });
           },
         })
         .on('error', err => conn.emit('error', err))
@@ -108,6 +107,12 @@ const createConnection = options => {
       if (options.followRedirects && resp.statusCode >= 301 && resp.statusCode <= 303) {
         const location = resp.headers.location;
         const qualifiedRedirection = location.startsWith('/') ? options.uri.origin + location : location;
+
+        // we do no want to leak memory so we must consume response stream,
+        // but we do not want to destroy the response as that would destroy the underlying
+        // socket and our agent could possible reuse it.
+        resp.on('data', () => {});
+
         return request
           .get(qualifiedRedirection, { followRedirects: true, json: options.json })
           .on('response', nextResp => {
