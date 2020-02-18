@@ -1,6 +1,7 @@
-./test
 coverage
 .vscode
 .nyc_output
 .git
 .gitignore
+proxy.test.js
+test
