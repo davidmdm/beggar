@@ -36,44 +36,49 @@ const httpLib = protocol => {
   }
 };
 
-const createProxiedConnection = (uri, options) => {
+const createProxiedConnection = options => {
   const passthrough = new PassThrough();
   const conn = new Connection(passthrough, options);
 
-  const targetProtocol = uri.protocol;
-  const targetHost = util.format(
+  const proxyAuth =
+    options.proxy.username &&
+    options.proxy.password &&
+    'Basic ' + Buffer.from(`${options.proxy.username}:${options.proxy.password}`).toString('base64');
+
+  const proxyHttpLib = httpLib(options.proxy.protocol);
+  const targetHttpLib = httpLib(options.uri.protocol);
+
+  const proxyPath = util.format(
     '%s:%s',
     options.uri.hostname,
-    options.uri.port || (targetProtocol === 'https:' ? 443 : 80)
+    options.uri.port || targetHttpLib.globalAgent.defaultPort
   );
-  const { hostname, port, protocol, username, password } = new URL(options.proxy);
-  const proxyAuth = username && password && 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
 
-  httpLib(protocol)
+  proxyHttpLib
     .request({
-      host: hostname,
-      port: port && Number(port),
+      host: options.proxy.hostname,
+      port: options.proxy.port,
       headers: {
-        host: targetHost,
+        host: options.uri.host,
         'User-Agent': (options.headers && options.headers['user-agent']) || defaultUserAgent,
         'Proxy-Authorization': proxyAuth || undefined,
       },
       method: 'CONNECT',
-      path: targetHost,
+      path: proxyPath,
       agent: false,
     })
     .on('connect', function(_, socket) {
-      const req = httpLib(targetProtocol)
-        .request(uri, {
+      const req = targetHttpLib
+        .request(options.uri, {
           method: options.method && options.method.toUpperCase(),
           headers: { 'User-Agent': defaultUserAgent, ...options.headers },
           auth: options.auth && options.auth.user + ':' + options.auth.pass,
           agent: null,
           createConnection: () => {
-            if (targetProtocol !== 'https:') {
+            if (options.uri.protocol !== 'https:') {
               return socket;
             }
-            return tls.connect(0, { servername: uri.host, socket }, () => {});
+            return tls.connect(0, { servername: options.uri.host, socket }, () => {});
           },
         })
         .on('error', err => conn.emit('error', err))
@@ -90,8 +95,8 @@ const createProxiedConnection = (uri, options) => {
   return conn;
 };
 
-const createConnection = (uri, options) => {
-  const req = httpLib(uri.protocol).request(uri, {
+const createConnection = options => {
+  const req = httpLib(options.uri.protocol).request(options.uri, {
     method: options.method && options.method.toUpperCase(),
     headers: { 'User-Agent': defaultUserAgent, ...options.headers },
     auth: options.auth && options.auth.user + ':' + options.auth.pass,
@@ -102,7 +107,7 @@ const createConnection = (uri, options) => {
     req.on('response', resp => {
       if (options.followRedirects && resp.statusCode >= 301 && resp.statusCode <= 303) {
         const location = resp.headers.location;
-        const qualifiedRedirection = location.startsWith('/') ? uri.origin + location : location;
+        const qualifiedRedirection = location.startsWith('/') ? options.uri.origin + location : location;
         return request
           .get(qualifiedRedirection, { followRedirects: true, json: options.json })
           .on('response', nextResp => {
@@ -137,7 +142,13 @@ function request(uri, options = {}) {
     options = uri;
   }
 
-  options.uri = new URL(options.uri);
+  if (typeof options.uri === 'string') {
+    options.uri = new URL(options.uri);
+  }
+  if (typeof options.proxy === 'string') {
+    options.proxy = new URL(options.proxy);
+  }
+
   const url = options.uri;
 
   if (options.qs) {
@@ -146,7 +157,7 @@ function request(uri, options = {}) {
     url.search = querystring.stringify({ ...Object.fromEntries(url.searchParams), ...options.query });
   }
 
-  const conn = options.proxy ? createProxiedConnection(url, options) : createConnection(url, options);
+  const conn = options.proxy ? createProxiedConnection(options) : createConnection(options);
 
   if (!options.method || options.method.toLowerCase() === 'get') {
     conn.end();
