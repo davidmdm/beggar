@@ -1,5 +1,6 @@
 'use strict';
 
+const http = require('http');
 const { format } = require('util');
 const { Duplex } = require('stream');
 
@@ -41,6 +42,15 @@ function readableToBuffer(readable) {
       .on('end', () => resolve(Buffer.concat(parts)))
       .on('error', reject);
   });
+}
+
+class HttpError extends Error {
+  constructor(statusCode, message, headers, body) {
+    super(message);
+    this.statusCode = statusCode;
+    this.headers = headers;
+    this.body = body;
+  }
 }
 
 class Connection extends Duplex {
@@ -102,11 +112,39 @@ class Connection extends Duplex {
         if (!this.isPipedTo) {
           this.end();
         }
+
         const response = this.incomingMessage || (await new Promise(resolve => this.once('response', resolve)));
-        if (this.opts.json === true && !(response.headers['content-type'] || '').includes('application/json')) {
+        if (
+          response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          this.opts.json === true &&
+          !(response.headers['content-type'] || '').startsWith('application/json')
+        ) {
+          // Make sure to consume to the response to avoid memory leaks
+          response.on('data', () => {});
           throw new Error(format('Content-Type is %s, expected application/json', response.headers['content-type']));
         }
+
         const buffer = await readableToBuffer(this);
+
+        if (this.opts.simple === true && response.statusCode >= 400) {
+          if (response.headers['content-type'].startsWith('application/json')) {
+            const payload = JSON.parse(buffer.toString());
+            throw new HttpError(
+              response.statusCode,
+              payload.message || http.STATUS_CODES[response.statusCode],
+              response.headers,
+              payload
+            );
+          }
+          throw new HttpError(
+            response.statusCode,
+            http.STATUS_CODES[response.statusCode],
+            response.headers,
+            buffer.toString()
+          );
+        }
+
         response.body = this.opts.json === true ? JSON.parse(buffer.toString()) : buffer;
         return fn(response);
       })(),
