@@ -44,6 +44,10 @@ function readableToBuffer(readable) {
   });
 }
 
+function statusOk(statusCode) {
+  return statusCode >= 200 && statusCode < 300;
+}
+
 class HttpError extends Error {
   constructor(statusCode, message, headers, body) {
     super(message);
@@ -51,6 +55,24 @@ class HttpError extends Error {
     this.headers = headers;
     this.body = body;
   }
+}
+
+function getResponseError(response, buffer) {
+  if (response.headers['content-type'].startsWith('application/json')) {
+    const payload = JSON.parse(buffer.toString());
+    return new HttpError(
+      response.statusCode,
+      payload.message || http.STATUS_CODES[response.statusCode],
+      response.headers,
+      payload
+    );
+  }
+  return new HttpError(
+    response.statusCode,
+    http.STATUS_CODES[response.statusCode],
+    response.headers,
+    buffer.toString()
+  );
 }
 
 class Connection extends Duplex {
@@ -61,6 +83,7 @@ class Connection extends Duplex {
     this.source = null;
     this.incomingMessage = null;
     this.outgoingMessage = null;
+    this.responsePromise = null;
     this.outgoingHeaders = {};
 
     const pipe = Duplex.prototype.pipe.bind(this);
@@ -107,7 +130,7 @@ class Connection extends Duplex {
   }
 
   then(fn, handle) {
-    const promise = Promise.race([
+    this.responsePromise = Promise.race([
       (async () => {
         if (!this.isPipedTo) {
           this.end();
@@ -115,8 +138,7 @@ class Connection extends Duplex {
 
         const response = this.incomingMessage || (await new Promise(resolve => this.once('response', resolve)));
         if (
-          response.statusCode >= 200 &&
-          response.statusCode < 300 &&
+          statusOk(response.statusCode) &&
           this.opts.json === true &&
           !(response.headers['content-type'] || '').startsWith('application/json')
         ) {
@@ -126,23 +148,9 @@ class Connection extends Duplex {
         }
 
         const buffer = await readableToBuffer(this);
-
-        if (this.opts.simple === true && response.statusCode >= 400) {
-          if (response.headers['content-type'].startsWith('application/json')) {
-            const payload = JSON.parse(buffer.toString());
-            throw new HttpError(
-              response.statusCode,
-              payload.message || http.STATUS_CODES[response.statusCode],
-              response.headers,
-              payload
-            );
-          }
-          throw new HttpError(
-            response.statusCode,
-            http.STATUS_CODES[response.statusCode],
-            response.headers,
-            buffer.toString()
-          );
+        if (this.opts.rejectError === true && response.statusCode >= 400) {
+          this.responseError = getResponseError(response, buffer);
+          throw this.responseError;
         }
 
         response.body = this.opts.json === true ? JSON.parse(buffer.toString()) : buffer;
@@ -151,12 +159,15 @@ class Connection extends Duplex {
       new Promise((_, reject) => this.once('error', reject)),
     ]);
     if (handle) {
-      return promise.catch(handle);
+      return this.responsePromise.catch(handle);
     }
-    return promise;
+    return this.responsePromise;
   }
 
   catch(handle) {
+    if (this.responsePromise) {
+      return this.responsePromise.catch(handle);
+    }
     return this.then(x => x, handle);
   }
 }

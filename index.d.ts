@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { URL } from 'url';
-import { IncomingMessage } from 'http';
+import { IncomingMessage, Agent } from 'http';
 import { Readable, Duplex } from 'stream';
 declare type Dictionary<T> = Partial<Record<string, T>>;
 declare type JsonOption = { json: true };
@@ -20,6 +20,8 @@ export declare type RequestOptions = {
   query?: Dictionary<any>;
   formData?: Dictionary<string | Buffer | Readable>;
   decompress?: boolean;
+  agent?: Agent | false;
+  rejectError?: boolean;
 };
 
 type RequestOptionsWithoutUri = Omit<RequestOptions, 'uri'>;

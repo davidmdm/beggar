@@ -83,6 +83,8 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
    `http.Agent` or `false`, will be passed to underlying NodeJS ClientRequest
 - proxy     
     `string` or `URL` of the proxy server. This feature is currently _<span style="color: yellow;">experimental</span>_ and as such has not been thoroughly tested.
+- rejectError      
+    `boolean` default false. Will reject an error containing response headers, body, statusCode and message on statusCodes outside of the 2xx range
   
 
 The request function supports two signatures:

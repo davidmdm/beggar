@@ -404,8 +404,42 @@ describe('Tests', () => {
     assert.equal(put.body.request.method, 'PUT');
     assert.equal(post.body.request.method, 'POST');
   });
+
   it('should user method helper function and ignore options.method', async () => {
     const put = await request.put(baseUri + '/details', { method: 'get', json: true });
     assert.equal(put.body.request.method, 'PUT');
+  });
+
+  it('should reject an error if response has a bad statuscode if option.rejectError is true', async () => {
+    const promise = request.get(baseUri + '/400-json', { rejectError: true });
+    await assert.rejects(promise, {
+      message: 'custom error message',
+      statusCode: 400,
+      body: {
+        description: 'other field',
+        message: 'custom error message',
+      },
+    });
+    // There is a date field in the headers that i can't do deep comparison on.
+    // Here I just want to assert that the response headers are part of the error.
+    const error = await promise.catch(err => err);
+    assert.equal(error.headers['content-type'], 'application/json; charset=utf8');
+    assert.equal(error.headers['transfer-encoding'], 'chunked');
+    assert.equal(error.headers.connection, 'close');
+  });
+
+  it('should reject a text error if response has a bad statuscode if option.rejectError is true', async () => {
+    const promise = request.get(baseUri + '/403-text', { rejectError: true });
+    await assert.rejects(promise, {
+      message: 'Forbidden',
+      statusCode: 403,
+      body: '<html><body>Error Occured!!!</body></html>',
+    });
+    // There is a date field in the headers that i can't do deep comparison on.
+    // Here I just want to assert that the response headers are part of the error.
+    const error = await promise.catch(err => err);
+    assert.equal(error.headers['content-type'], 'text/html; charset=utf8');
+    assert.equal(error.headers['transfer-encoding'], 'chunked');
+    assert.equal(error.headers.connection, 'close');
   });
 });

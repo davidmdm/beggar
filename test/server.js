@@ -128,6 +128,22 @@ const createServer = () => {
         .reduce((acc, enc) => acc.pipe(compressions[enc]()), req)
         .pipe(res);
     }
+
+    if (req.url === '/400-json') {
+      return res.writeHead(400, { 'Content-Type': 'application/json; charset=utf8' }).end(
+        JSON.stringify({
+          message: 'custom error message',
+          description: 'other field',
+        })
+      );
+    }
+
+    if (req.url === '/403-text') {
+      return res
+        .writeHead(403, { 'Content-Type': 'text/html; charset=utf8' })
+        .end('<html><body>Error Occured!!!</body></html>');
+    }
+
     return res.writeHead(404).end();
   });
 };
