@@ -19,6 +19,7 @@ export declare type RequestOptions = {
   formData?: Dictionary<string | Buffer | Readable>;
   decompress?: boolean;
   agent?: Agent | false;
+  proxy?: string | URL;
   rejectError?: boolean;
 };
 
