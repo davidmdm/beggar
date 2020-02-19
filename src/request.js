@@ -115,7 +115,7 @@ const createConnection = options => {
         resp.on('data', () => {});
 
         return request
-          .get(qualifiedRedirection, { followRedirects: true, json: options.json })
+          .get(qualifiedRedirection, { followRedirects: true })
           .on('response', nextResp => {
             nextResp.redirects = [qualifiedRedirection, ...(nextResp.redirects || [])];
             resolve(nextResp);
@@ -174,7 +174,7 @@ function request(uri, options = {}) {
     options.body.pipe(conn);
   } else if (options.body !== undefined) {
     const payload = JSON.stringify(options.body);
-    conn.setHeader('Content-Type', 'application/json');
+    conn.setHeader('Content-Type', 'application/json; charset=utf-8');
     conn.setHeader('Content-Length', payload.length);
     conn.end(payload);
   } else if (options.form) {

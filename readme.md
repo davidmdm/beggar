@@ -57,8 +57,6 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
    `string` or `URL`
 - followRedirects  
    `boolean` will follow all redirects if true
-- json  
-  `boolean` will parse the response body as JSON.
 - headers  
    `object` object containing headers
 - auth  
@@ -79,13 +77,12 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
    `object` same as `options.qs` but will use the NodeJS native querystring module.
 - decompress  
    `boolean` by default true. Will decompress encodings br,gzip, and deflate. Set to false to get raw buffer
-- agent    
+- agent  
    `http.Agent` or `false`, will be passed to underlying NodeJS ClientRequest
-- proxy     
-    `string` or `URL` of the proxy server. This feature is currently _<span style="color: yellow;">experimental</span>_ and as such has not been thoroughly tested.
-- rejectError      
-    `boolean` default false. Will reject an error containing response headers, body, statusCode and message on statusCodes outside of the 2xx range
-  
+- proxy  
+   `string` or `URL` of the proxy server. This feature is currently _<span style="color: yellow;">experimental</span>_ and as such has not been thoroughly tested.
+- rejectError  
+   `boolean` default false. Will reject an error containing response headers, body, statusCode and message on statusCodes outside of the 2xx range
 
 The request function supports two signatures:
 
@@ -141,15 +138,15 @@ pipeline(
   fs.createWriteStream('./response.json'),
   err => { ... }
 )
-  
+
 ```
 
 Using promises and `async/await`
 
 ```javascript
 const response = await request.get('http://localhost:3000');
-// response.body will be the result body as a buffer.
-// If options.json was set to true the result will be parsed as JSON.
+// response.body will be parsed according to the response header Content-Type and will either be a Javascript Object,
+// a string or an instance of Buffer.
 // If options.followRedirects was set to true and redirects occured they urls will be stored on response.redirects
 ```
 

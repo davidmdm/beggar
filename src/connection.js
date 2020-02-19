@@ -57,21 +57,31 @@ class HttpError extends Error {
   }
 }
 
+function parseResponseBuffer(contentType = '', buffer) {
+  if (contentType.startsWith('application/json')) {
+    return JSON.parse(buffer.toString());
+  }
+  if (contentType.startsWith('text')) {
+    return buffer.toString();
+  }
+  return buffer;
+}
+
 function getResponseError(response, buffer) {
-  if (response.headers['content-type'].startsWith('application/json')) {
-    const payload = JSON.parse(buffer.toString());
+  const payload = parseResponseBuffer(response.headers['content-type'], buffer);
+  if (typeof payload === 'string' || payload instanceof Buffer) {
     return new HttpError(
       response.statusCode,
-      payload.message || http.STATUS_CODES[response.statusCode],
+      http.STATUS_CODES[response.statusCode],
       response.headers,
-      payload
+      buffer.toString()
     );
   }
   return new HttpError(
     response.statusCode,
-    http.STATUS_CODES[response.statusCode],
+    payload.message || http.STATUS_CODES[response.statusCode],
     response.headers,
-    buffer.toString()
+    payload
   );
 }
 
@@ -137,23 +147,13 @@ class Connection extends Duplex {
         }
 
         const response = this.incomingMessage || (await new Promise(resolve => this.once('response', resolve)));
-        if (
-          statusOk(response.statusCode) &&
-          this.opts.json === true &&
-          !(response.headers['content-type'] || '').startsWith('application/json')
-        ) {
-          // Make sure to consume to the response to avoid memory leaks
-          response.on('data', () => {});
-          throw new Error(format('Content-Type is %s, expected application/json', response.headers['content-type']));
-        }
-
         const buffer = await readableToBuffer(this);
         if (this.opts.rejectError === true && response.statusCode >= 400) {
           this.responseError = getResponseError(response, buffer);
           throw this.responseError;
         }
 
-        response.body = this.opts.json === true ? JSON.parse(buffer.toString()) : buffer;
+        response.body = parseResponseBuffer(response.headers['content-type'], buffer);
         return fn(response);
       })(),
       new Promise((_, reject) => this.once('error', reject)),

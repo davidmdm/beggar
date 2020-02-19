@@ -3,11 +3,9 @@ import { URL } from 'url';
 import { IncomingMessage, Agent } from 'http';
 import { Readable, Duplex } from 'stream';
 declare type Dictionary<T> = Partial<Record<string, T>>;
-declare type JsonOption = { json: true };
 export declare type RequestOptions = {
   method?: string;
   uri: string | URL;
-  json?: boolean;
   followRedirects?: boolean;
   headers?: Dictionary<string | string[]>;
   auth?: {
@@ -26,50 +24,23 @@ export declare type RequestOptions = {
 
 type RequestOptionsWithoutUri = Omit<RequestOptions, 'uri'>;
 
-export declare type ResolvedResponse<T> = IncomingMessage & {
-  body: T;
+export declare type ResolvedResponse = IncomingMessage & {
+  body: any;
   redirects?: string[];
 };
-export declare type Connection<T> = Duplex & Promise<ResolvedResponse<T>>;
+export declare type Connection = Duplex & Promise<ResolvedResponse>;
 
-export declare const request: {
-  <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-  <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<T extends JsonOption ? any : Buffer>;
-  get: {
-    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
-      T extends JsonOption ? any : Buffer
-    >;
-  };
-  post: {
-    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
-      T extends JsonOption ? any : Buffer
-    >;
-  };
-  put: {
-    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
-      T extends JsonOption ? any : Buffer
-    >;
-  };
-  patch: {
-    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
-      T extends JsonOption ? any : Buffer
-    >;
-  };
-  head: {
-    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
-      T extends JsonOption ? any : Buffer
-    >;
-  };
-  delete: {
-    <T extends RequestOptions>(options: T): Connection<T extends JsonOption ? any : Buffer>;
-    <T extends RequestOptionsWithoutUri>(uri: string | URL, options?: T): Connection<
-      T extends JsonOption ? any : Buffer
-    >;
-  };
+export declare type RequestFunction = {
+  (options: RequestOptions): Connection;
+  (uri: string | URL, options?: RequestOptionsWithoutUri): Connection;
+};
+
+export declare const request: RequestFunction & {
+  get: RequestFunction;
+  post: RequestFunction;
+  put: RequestFunction;
+  patch: RequestFunction;
+  head: RequestFunction;
+  delete: RequestFunction;
 };
 export {};

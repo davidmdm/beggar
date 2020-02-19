@@ -235,7 +235,6 @@ describe('Tests', () => {
       method: 'post',
       uri: baseUri + '/url-encoded',
       form: { hello: 'world', arr: [1, 2, 3] },
-      json: true,
     };
     const formResponse = await request(options);
     assert.equal(formResponse.statusCode, 200);
@@ -254,7 +253,6 @@ describe('Tests', () => {
         jsonReadable,
         key: 'value',
       },
-      json: true,
     };
     const formResponse = await request(options);
     assert.equal(formResponse.statusCode, 200);
@@ -274,7 +272,6 @@ describe('Tests', () => {
     const resp = await request.get({
       uri: baseUri + '/query',
       query: { answer: 42 },
-      json: true,
     });
     assert.deepEqual(resp.body, { answer: 42 });
   });
@@ -283,7 +280,6 @@ describe('Tests', () => {
     const resp = await request.get({
       uri: baseUri + '/query?hello=world&patate=aubergine',
       query: { patate: 'patate' },
-      json: true,
     });
     assert.deepEqual(resp.body, { hello: 'world', patate: 'patate' });
   });
@@ -332,7 +328,7 @@ describe('Tests', () => {
 
   for (const method of ['get', 'post', 'put', 'patch']) {
     it(format('should have utility method for making (%s) request', method.toUpperCase()), async () => {
-      const response = await request[method](baseUri + '/details', { json: true });
+      const response = await request[method](baseUri + '/details');
       assert.equal(response.statusCode, 200);
       assert.equal(response.body.request.method, method.toUpperCase());
     });
@@ -342,7 +338,6 @@ describe('Tests', () => {
     const response = await request({
       uri: baseUri + '/details',
       headers: { 'Accept-Encoding': ['application/octet-stream', 'application/zip'] },
-      json: true,
     });
     assert.equal(response.statusCode, 200);
     assert.equal(response.body.request.headers['accept-encoding'], 'application/octet-stream, application/zip');
@@ -352,10 +347,9 @@ describe('Tests', () => {
     const response = await request.put({
       uri: baseUri + '/details',
       body: { hello: 'world' },
-      json: true,
     });
     assert.equal(response.statusCode, 200);
-    assert.equal(response.body.request.headers['content-type'], 'application/json');
+    assert.equal(response.body.request.headers['content-type'], 'application/json; charset=utf-8');
     assert.equal(response.body.request.body, '{"hello":"world"}');
   });
 
@@ -387,20 +381,9 @@ describe('Tests', () => {
     assert.equal(decompressedBuffer.toString(), 'hello world');
   });
 
-  it('should throw an error if options.json is true but response is not json', async () => {
-    await assert.rejects(
-      request.post({
-        uri: baseUri + '/echo',
-        body: 'hello world',
-        json: true,
-      }),
-      { message: 'Content-Type is undefined, expected application/json' }
-    );
-  });
-
   it('should send request with correct method when using request[method](string|URL) syntax', async () => {
-    const put = await request.put(baseUri + '/details', { json: true });
-    const post = await request.post(new URL(baseUri + '/details'), { json: true });
+    const put = await request.put(baseUri + '/details');
+    const post = await request.post(new URL(baseUri + '/details'));
     assert.equal(put.body.request.method, 'PUT');
     assert.equal(post.body.request.method, 'POST');
   });
