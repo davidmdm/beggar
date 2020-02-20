@@ -140,28 +140,26 @@ class Connection extends Duplex {
   }
 
   then(fn, handle) {
+    if (this.responsePromise) {
+      return this.responsePromise.then(fn, handle);
+    }
     this.responsePromise = Promise.race([
       (async () => {
         if (!this.isPipedTo) {
           this.end();
         }
-
         const response = this.incomingMessage || (await new Promise(resolve => this.once('response', resolve)));
         const buffer = await readableToBuffer(this);
         if (this.opts.rejectError === true && response.statusCode >= 400) {
           this.responseError = getResponseError(response, buffer);
           throw this.responseError;
         }
-
         response.body = parseResponseBuffer(response.headers['content-type'], buffer);
-        return fn(response);
+        return response;
       })(),
       new Promise((_, reject) => this.once('error', reject)),
     ]);
-    if (handle) {
-      return this.responsePromise.catch(handle);
-    }
-    return this.responsePromise;
+    return this.responsePromise.then(fn, handle);
   }
 
   catch(handle) {

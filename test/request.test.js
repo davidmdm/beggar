@@ -425,4 +425,17 @@ describe('Tests', () => {
     assert.equal(error.headers['transfer-encoding'], 'chunked');
     assert.equal(error.headers.connection, 'close');
   });
+
+  it('calling then multiple times should return the same response', async () => {
+    const req = request(baseUri + '/details');
+    const [p1, p2] = await Promise.all([req.then(resp => resp), req.then(resp => resp)]);
+    assert.deepEqual(p1, p2);
+  });
+
+  it('should return the same response when calling then again after an initial promise has resolved', async () => {
+    const req = request(baseUri + '/details');
+    const p1 = await req.then(resp => resp);
+    const p2 = await req.then(resp => resp);
+    assert.deepEqual(p1, p2);
+  });
 });
