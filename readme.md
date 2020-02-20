@@ -160,13 +160,32 @@ const request = file.pipe(request.put('http://destination.com'));
 const response = await request;
 ```
 
+Beggar also supports creating new instance of request with default options.
+
+```javascript
+const authenticatedRequest = request.defaults({ auth: { user: 'username', pass: 'password' } });
+
+// authenticatedRequest will post to my service with the auth value set.
+authenticatedRequest.post('https://myservice.com/upload', { body: 'data' });
+
+// of course it is always possible to override the value in the current options
+authenticatedRequest.post({
+  uri: 'https://myservice.com/upload',
+  body: 'data',
+  auth: { user: 'differentUser', pass: 'differentPassword' },
+});
+```
+
+Note that the `defaults` utility only exists on the root request function and not on the functions created by
+defaults.
+
 ### RoadMap
 
 There are some things that could be improved upon. A few that come to mind:
 
 - multi-part formdata options
 - redirect options
-- proxy support (tesing and TLS options)
+- proxy support (testing and TLS options)
 - cookie support (if requested)
 - perhaps utility functions that bypass returning a response object all together
   ```javascript
