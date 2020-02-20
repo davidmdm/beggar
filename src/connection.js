@@ -154,7 +154,7 @@ class Connection extends Duplex {
           this.responseError = getResponseError(response, buffer);
           throw this.responseError;
         }
-        response.body = parseResponseBuffer(response.headers['content-type'], buffer);
+        response.body = this.opts.raw ? buffer : parseResponseBuffer(response.headers['content-type'], buffer);
         return response;
       })(),
       new Promise((_, reject) => this.once('error', reject)),

@@ -21,6 +21,7 @@ export declare type RequestOptions = {
   agent?: Agent | false;
   proxy?: string | URL;
   rejectError?: boolean;
+  raw?: boolean;
 };
 
 type PartialRequestOptions = Partial<RequestOptions>;

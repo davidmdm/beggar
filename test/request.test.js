@@ -353,6 +353,42 @@ describe('Tests', () => {
     assert.equal(response.body.request.body, '{"hello":"world"}');
   });
 
+  it('should implicitly parse response.body as json if content-type of response is application/json', async () => {
+    const response = await request.post(baseUri + '/echo-json', { body: { parse: 'json' } });
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.body, { parse: 'json' });
+  });
+
+  it('should bypass implicit parsing and return body as buffer if options.raw is true (json)', async () => {
+    const response = await request.post(baseUri + '/echo-json', { body: { parse: 'json' }, raw: true });
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.body, Buffer.from(JSON.stringify({ parse: 'json' })));
+  });
+
+  it('should bypass implicit parsing and return body as empty buffer if options.raw is true and no content is sent (json)', async () => {
+    const response = await request.get(baseUri + '/echo-json', { raw: true });
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.body, Buffer.from([]));
+  });
+
+  it('should implicitly parse response.body as string if content-type of response is text', async () => {
+    const response = await request.post(baseUri + '/echo-text', { body: { parse: 'text' } });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, '{"parse":"text"}');
+  });
+
+  it('should bypass implicit parsing and return body as buffer if options.raw is true (text)', async () => {
+    const response = await request.post(baseUri + '/echo-text', { body: { parse: 'text' }, raw: true });
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.body, Buffer.from('{"parse":"text"}'));
+  });
+
+  it('should bypass implicit parsing and return body as empty buffer if options.raw is true and no content (text)', async () => {
+    const response = await request.get(baseUri + '/echo-text', { raw: true });
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.body, Buffer.from([]));
+  });
+
   it('should have an undefined response.body if content-type is json and no body was sent back', async () => {
     const response = await request.get(baseUri + '/echo-json');
     assert.equal(response.statusCode, 200);

@@ -161,6 +161,7 @@ function sanitizeOpts(options) {
     query: options.query,
     decompress: options.decompress !== false,
     rejectError: options.rejectError === true,
+    raw: options.raw === true,
   };
 }
 
