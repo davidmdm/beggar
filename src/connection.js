@@ -59,7 +59,7 @@ class HttpError extends Error {
 
 function parseResponseBuffer(contentType = '', buffer) {
   if (contentType.startsWith('application/json')) {
-    return JSON.parse(buffer.toString());
+    return buffer.length > 0 ? JSON.parse(buffer.toString()) : undefined;
   }
   if (contentType.startsWith('text')) {
     return buffer.toString();

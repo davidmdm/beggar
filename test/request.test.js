@@ -353,6 +353,24 @@ describe('Tests', () => {
     assert.equal(response.body.request.body, '{"hello":"world"}');
   });
 
+  it('should have an undefined response.body if content-type is json and no body was sent back', async () => {
+    const response = await request.get(baseUri + '/echo-json');
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, undefined);
+  });
+
+  it('should have an empty string on response.body if content-type is text and no body was sent back', async () => {
+    const response = await request.get(baseUri + '/echo-text');
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, '');
+  });
+
+  it('should have an empty buffer on response.body if content-type is not json or text and no body was sent back', async () => {
+    const response = await request.get(baseUri + '/echo');
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, '');
+  });
+
   it('should decompress when Content-Encoding is set on response (promises)', async () => {
     const [decompressed, compressed] = await Promise.all([
       request.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: true }),

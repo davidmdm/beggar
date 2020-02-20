@@ -37,6 +37,14 @@ const createServer = () => {
     if (req.url === '/echo') {
       return req.pipe(res);
     }
+    if (req.url === '/echo-json') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return req.pipe(res);
+    }
+    if (req.url === '/echo-text') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      return req.pipe(res);
+    }
 
     if (req.url === '/redirect') {
       res.setHeader('Location', '/home');
