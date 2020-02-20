@@ -141,26 +141,35 @@ const createConnection = options => {
   return conn;
 };
 
-function request(uri, options = {}) {
-  if (typeof uri === 'string' || uri instanceof URL) {
-    options.uri = uri;
-  } else {
-    options = uri;
-  }
+function isUrlLike(value) {
+  return typeof value === 'string' || value instanceof URL;
+}
 
-  if (typeof options.uri === 'string') {
-    options.uri = new URL(options.uri);
-  }
-  if (typeof options.proxy === 'string') {
-    options.proxy = new URL(options.proxy);
-  }
+function sanitizeOpts(options) {
+  return {
+    method: options.method,
+    headers: options.headers,
+    uri: options.uri instanceof URL ? options.uri : new URL(options.uri),
+    proxy: options.proxy && (options.proxy instanceof URL ? options.proxy : new URL(options.proxy)),
+    followRedirects: options.followRedirects === true,
+    auth: options.auth,
+    body: options.body,
+    form: options.form,
+    formData: options.formData,
+    qs: options.qs,
+    query: options.query,
+    decompress: options.decompress !== false,
+    rejectError: options.rejectError === true,
+  };
+}
 
-  const url = options.uri;
+function request(uri, opts = {}) {
+  const options = sanitizeOpts(isUrlLike(uri) ? { ...opts, uri } : uri);
 
   if (options.qs) {
-    url.search = qs.stringify({ ...Object.fromEntries(url.searchParams), ...options.qs });
+    options.uri.search = qs.stringify({ ...Object.fromEntries(options.uri.searchParams), ...options.qs });
   } else if (options.query) {
-    url.search = querystring.stringify({ ...Object.fromEntries(url.searchParams), ...options.query });
+    options.uri.search = querystring.stringify({ ...Object.fromEntries(options.uri.searchParams), ...options.query });
   }
 
   const conn = options.proxy ? createProxiedConnection(options) : createConnection(options);

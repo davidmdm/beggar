@@ -389,7 +389,7 @@ describe('Tests', () => {
   });
 
   it('should user method helper function and ignore options.method', async () => {
-    const put = await request.put(baseUri + '/details', { method: 'get', json: true });
+    const put = await request.put(baseUri + '/details', { method: 'get' });
     assert.equal(put.body.request.method, 'PUT');
   });
 
