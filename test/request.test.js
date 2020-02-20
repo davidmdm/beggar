@@ -438,4 +438,24 @@ describe('Tests', () => {
     const p2 = await req.then(resp => resp);
     assert.deepEqual(p1, p2);
   });
+  it('should make request with defaults', async () => {
+    const r = request.defaults({ auth: { user: 'test', pass: 'test' } });
+    const resp = await r({ uri: baseUri + '/details' });
+    const expectedAuth = 'Basic ' + Buffer.from('test:test').toString('base64');
+    assert.equal(resp.body.request.headers.authorization, expectedAuth);
+  });
+
+  it('should make request with defaults (utility method)', async () => {
+    const r = request.defaults({ auth: { user: 'test', pass: 'test' } });
+    const resp = await r.get(baseUri + '/details');
+    const expectedAuth = 'Basic ' + Buffer.from('test:test').toString('base64');
+    assert.equal(resp.body.request.headers.authorization, expectedAuth);
+  });
+
+  it('should override defaults', async () => {
+    const r = request.defaults({ auth: { user: 'test', pass: 'test' } });
+    const resp = await r.get(baseUri + '/details', { auth: { user: 'patate', pass: 'aubergine' } });
+    const expectedAuth = 'Basic ' + Buffer.from('patate:aubergine').toString('base64');
+    assert.equal(resp.body.request.headers.authorization, expectedAuth);
+  });
 });

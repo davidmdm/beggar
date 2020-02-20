@@ -23,7 +23,7 @@ export declare type RequestOptions = {
   rejectError?: boolean;
 };
 
-type RequestOptionsWithoutUri = Omit<RequestOptions, 'uri'>;
+type PartialRequestOptions = Partial<RequestOptions>;
 
 export declare type ResolvedResponse = IncomingMessage & {
   body: any;
@@ -33,7 +33,13 @@ export declare type Connection = Duplex & Promise<ResolvedResponse>;
 
 export declare type RequestFunction = {
   (options: RequestOptions): Connection;
-  (uri: string | URL, options?: RequestOptionsWithoutUri): Connection;
+  (uri: string | URL, options?: PartialRequestOptions): Connection;
+};
+
+type UriOption = { uri: string | URL };
+type DefaultUriRequestFunction = {
+  (options: PartialRequestOptions): Connection;
+  (uri: string | URL, options?: PartialRequestOptions): Connection;
 };
 
 export declare const request: RequestFunction & {
@@ -43,5 +49,15 @@ export declare const request: RequestFunction & {
   patch: RequestFunction;
   head: RequestFunction;
   delete: RequestFunction;
+  defaults: <T extends Partial<RequestOptions>>(
+    options: T
+  ) => (T extends UriOption ? DefaultUriRequestFunction : RequestFunction) & {
+    get: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
+    post: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
+    put: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
+    patch: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
+    head: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
+    delete: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
+  };
 };
 export {};

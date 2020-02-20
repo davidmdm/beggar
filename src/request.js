@@ -16,6 +16,7 @@ const FormData = require('form-data');
 const { Connection } = require('./connection');
 
 const version = require('../package.json').version;
+const methods = http.METHODS.map(method => method.toLowerCase());
 
 const defaultUserAgent = util.format(
   'Beggar/%s (Node.js %s; %s %s)',
@@ -141,7 +142,7 @@ const createConnection = options => {
   return conn;
 };
 
-function isUrlLike(value) {
+function isUri(value) {
   return typeof value === 'string' || value instanceof URL;
 }
 
@@ -164,7 +165,7 @@ function sanitizeOpts(options) {
 }
 
 function request(uri, opts = {}) {
-  const options = sanitizeOpts(isUrlLike(uri) ? { ...opts, uri } : uri);
+  const options = sanitizeOpts(isUri(uri) ? { ...opts, uri } : uri);
 
   if (options.qs) {
     options.uri.search = qs.stringify({ ...Object.fromEntries(options.uri.searchParams), ...options.qs });
@@ -203,15 +204,30 @@ function request(uri, opts = {}) {
   return conn;
 }
 
-for (const method of http.METHODS) {
-  request[method.toLowerCase()] = (uri, options = {}) => {
-    if (typeof uri === 'string' || uri instanceof URL) {
-      options.method = method;
-    } else {
-      uri.method = method;
+for (const method of methods) {
+  request[method] = (uri, options = {}) => {
+    if (isUri(uri)) {
+      return request(uri, { ...options, method });
     }
-    return request(uri, options);
+    return request({ ...uri, method });
   };
 }
+
+const wrapWithDefaults = (fn, defaults) => {
+  return (uri, opts = {}) => {
+    if (isUri(uri)) {
+      return fn(uri, { ...defaults, ...opts });
+    }
+    return fn({ ...defaults, ...uri });
+  };
+};
+
+request.defaults = defaults => {
+  const wrapper = wrapWithDefaults(request, defaults);
+  for (const method of methods) {
+    wrapper[method] = wrapWithDefaults(request[method], defaults);
+  }
+  return wrapper;
+};
 
 module.exports = { request };
