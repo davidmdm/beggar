@@ -1,11 +1,18 @@
 /// <reference types="node" />
 import { URL } from 'url';
+import { SecureContextOptions } from 'tls';
 import { IncomingMessage, Agent } from 'http';
 import { Readable, Duplex } from 'stream';
+
+declare type TlsOptions = SecureContextOptions & {
+  rejectUnauthorized?: boolean; // Defaults to true
+  servername?: string; // SNI TLS Extension
+};
+declare type Uri = string | URL;
 declare type Dictionary<T> = Partial<Record<string, T>>;
 export declare type RequestOptions = {
   method?: string;
-  uri: string | URL;
+  uri: Uri;
   followRedirects?: boolean;
   headers?: Dictionary<string | string[]>;
   auth?: {
@@ -19,18 +26,10 @@ export declare type RequestOptions = {
   formData?: Dictionary<string | Buffer | Readable>;
   decompress?: boolean;
   agent?: Agent | false;
-  proxy?: string | URL;
+  proxy?: Uri | { uri: Uri; tls?: TlsOptions };
   rejectError?: boolean;
   raw?: boolean;
-  tls?: {
-    ca?: string | Buffer | Array<string | Buffer>;
-    cert?: string | Buffer | Array<string | Buffer>;
-    ciphers?: string;
-    key?: string | Buffer | Array<Buffer | KeyObject>;
-    passphrase?: string;
-    pfx?: string | Buffer | Array<string | Buffer | PxfObject>;
-    sessionIdContext?: string;
-  };
+  tls?: TlsOptions;
 };
 
 type PartialRequestOptions = Partial<RequestOptions>;

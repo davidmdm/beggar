@@ -67,6 +67,7 @@ const createProxiedConnection = options => {
       method: 'CONNECT',
       path: proxyPath,
       agent: false,
+      ...options.proxyTls,
     })
     .on('connect', function(_, socket) {
       const req = targetHttpLib
@@ -147,12 +148,49 @@ function isUri(value) {
   return typeof value === 'string' || value instanceof URL;
 }
 
-function sanitizeOpts(options) {
+const getProxyUri = proxy => {
+  if (!proxy) {
+    return undefined;
+  }
+  const uri = proxy.uri || proxy;
+  return uri instanceof URL ? uri : new URL(uri);
+};
+
+const sanitizeTlsOptions = tls => {
+  if (!tls) {
+    return undefined;
+  }
+  return {
+    cert: tls.cert,
+    key: tls.key,
+    ca: tls.ca,
+    ciphers: tls.ciphers,
+    clientCertEngine: tls.clientCertEngine,
+    privateKeyEngine: tls.privateKeyEngine,
+    privateKeyIdentifier: tls.privateKeyIdentifier,
+    maxVersion: tls.maxVersion,
+    minVersion: tls.minVersion,
+    passphrase: tls.passphrase,
+    secureOptions: tls.secureOptions,
+    secureProtocol: tls.secureProtocol,
+    sessionIdContext: tls.sessionIdContext,
+    pfx: tls.pfx,
+    crl: tls.crl,
+    dhparam: tls.dhparam,
+    ecdhCurve: tls.ecdhCurve,
+    honorCipherOrder: tls.honorCipherOrder,
+    rejectUnauthorized: tls.rejectUnauthorized,
+    servername: tls.servername,
+  };
+};
+
+const sanitizeOpts = options => {
   return {
     method: options.method,
     headers: options.headers,
     uri: options.uri instanceof URL ? options.uri : new URL(options.uri),
-    proxy: options.proxy && (options.proxy instanceof URL ? options.proxy : new URL(options.proxy)),
+    proxy: getProxyUri(options.proxy),
+    proxyTls: options.proxy && sanitizeTlsOptions(options.proxy.tls),
     followRedirects: options.followRedirects === true,
     auth: options.auth,
     body: options.body,
@@ -163,15 +201,9 @@ function sanitizeOpts(options) {
     decompress: options.decompress !== false,
     rejectError: options.rejectError === true,
     raw: options.raw === true,
-    tls: {
-      cert: options.tls && options.tls.cert,
-      key: options.tls && options.tls.key,
-      ca: options.tls && options.tls.ca,
-      // cipher: options.tls && options.tls.cipher,
-      // ca: options.tls && options.tls.ca,
-    },
+    tls: sanitizeTlsOptions(options.tls),
   };
-}
+};
 
 function request(uri, opts = {}) {
   const options = sanitizeOpts(isUri(uri) ? { ...opts, uri } : uri);
