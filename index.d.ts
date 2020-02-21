@@ -22,6 +22,15 @@ export declare type RequestOptions = {
   proxy?: string | URL;
   rejectError?: boolean;
   raw?: boolean;
+  tls?: {
+    ca?: string | Buffer | Array<string | Buffer>;
+    cert?: string | Buffer | Array<string | Buffer>;
+    ciphers?: string;
+    key?: string | Buffer | Array<Buffer | KeyObject>;
+    passphrase?: string;
+    pfx?: string | Buffer | Array<string | Buffer | PxfObject>;
+    sessionIdContext?: string;
+  };
 };
 
 type PartialRequestOptions = Partial<RequestOptions>;

@@ -62,7 +62,7 @@ const createProxiedConnection = options => {
       headers: {
         host: options.uri.host,
         'User-Agent': (options.headers && options.headers['user-agent']) || defaultUserAgent,
-        'Proxy-Authorization': proxyAuth || undefined,
+        ...(proxyAuth ? { 'Proxy-Authorization': proxyAuth } : undefined),
       },
       method: 'CONNECT',
       path: proxyPath,
@@ -78,7 +78,7 @@ const createProxiedConnection = options => {
             if (options.uri.protocol === 'http:') {
               return socket;
             }
-            return tls.connect(0, { servername: options.uri.host, socket });
+            return tls.connect(0, { ...options.tls, servername: options.uri.host, socket });
           },
         })
         .on('error', err => conn.emit('error', err))
@@ -102,6 +102,7 @@ const createConnection = options => {
     headers: { 'User-Agent': defaultUserAgent, ...options.headers },
     auth: options.auth && options.auth.user + ':' + options.auth.pass,
     agent: options.agent,
+    ...options.tls,
   });
 
   const responsePromise = new Promise((resolve, reject) =>
@@ -162,6 +163,13 @@ function sanitizeOpts(options) {
     decompress: options.decompress !== false,
     rejectError: options.rejectError === true,
     raw: options.raw === true,
+    tls: {
+      cert: options.tls && options.tls.cert,
+      key: options.tls && options.tls.key,
+      ca: options.tls && options.tls.ca,
+      // cipher: options.tls && options.tls.cipher,
+      // ca: options.tls && options.tls.ca,
+    },
   };
 }
 
