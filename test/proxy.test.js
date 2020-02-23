@@ -1,9 +1,11 @@
 'use strict';
 
 const fs = require('fs');
+const net = require('net');
 const path = require('path');
 const http = require('http');
 const https = require('https');
+const assert = require('assert');
 
 const { request: beggar } = require('..');
 
@@ -23,17 +25,32 @@ const listen = (server, port) => {
   });
 };
 
+// Example of proxy server Connect handler taken from NodeJS http DOCS
+// https://nodejs.org/api/http.html#http_event_connect
+const onConnect = (req, clientSocket, head) => {
+  const { port, hostname } = new URL(`http://${req.url}`);
+  const serverSocket = net.connect(Number(port) || 80, hostname, () => {
+    clientSocket.write('HTTP/1.1 200 Connection Established\r\n' + 'Proxy-agent: Node.js-Proxy\r\n' + '\r\n');
+    serverSocket.write(head);
+    serverSocket.pipe(clientSocket);
+    clientSocket.pipe(serverSocket);
+  });
+};
+
 describe('Proxy tests', () => {
   const httpProxyUri = 'http://localhost:3000';
-  const httpServer = 'http://localhost:4000';
-  const httpsServer = 'https://localhost:8000';
-  const httpsProxy = 'https://localhost:5000';
+  const httpServerUri = 'http://localhost:4000';
+  const httpsServerUri = 'https://localhost:8000';
+  const httpsProxyUri = 'https://localhost:5000';
 
   before(async () => {
     const httpProxy = http.createServer(serve('http proxy'));
     const httpServer = http.createServer(serve('http server'));
     const httpsProxy = https.createServer({ key: proxyKey, cert: proxyCert }, serve('https proxy'));
     const httpsServer = https.createServer({ key: serverKey, cert: serverCert }, serve('https server'));
+
+    httpProxy.on('connect', onConnect);
+    httpsProxy.on('connect', onConnect);
 
     await Promise.all([
       listen(httpProxy, 3000),
@@ -43,5 +60,41 @@ describe('Proxy tests', () => {
     ]);
   });
 
-  it('should proxy https over http', async () => {});
+  it('should proxy http over http', async () => {
+    const response = await beggar.get({
+      uri: httpServerUri,
+      proxy: httpProxyUri,
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, 'http server');
+  });
+
+  it('should proxy https over http', async () => {
+    const response = await beggar.get({
+      uri: httpsServerUri,
+      tls: { ca: [serverCert] },
+      proxy: httpProxyUri,
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, 'https server');
+  });
+
+  it('should proxy http over https', async () => {
+    const response = await beggar.get({
+      uri: httpServerUri,
+      proxy: { uri: httpsProxyUri, tls: { ca: [proxyCert] } },
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, 'http server');
+  });
+
+  it('should proxy https over https', async () => {
+    const response = await beggar.get({
+      uri: httpsServerUri,
+      tls: { ca: [serverCert] },
+      proxy: { uri: httpsProxyUri, tls: { ca: [proxyCert] } },
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, 'https server');
+  });
 });

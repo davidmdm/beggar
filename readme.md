@@ -80,11 +80,14 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
 - agent  
    `http.Agent` or `false`, will be passed to underlying NodeJS ClientRequest
 - proxy  
-   `string` or `URL` of the proxy server. This feature is currently _<span style="color: yellow;">experimental</span>_ and as such has not been thoroughly tested.
+   `string` | `URL` | { uri: `string` | `URL`; tls: `object` } Uri of the http proxy server. tls
+   options specific to the proxy can be passed here as well. 
 - rejectError  
    `boolean` default false. Will reject an error containing response headers, body, statusCode and message on statusCodes outside of the 2xx range
 - raw          
    `boolean` default false. If true will bypass Beggars implicity body parsing and response.body will be a Buffer instance
+- tls      
+    `object` tls options that will be passed to https.request. For more documentation on tls options please read the official NodeJS documentation [https://nodejs.org/api/https.html#https_https_request_options_callback](here)
 
 The request function supports two signatures:
 
