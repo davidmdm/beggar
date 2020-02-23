@@ -6,7 +6,7 @@ const { URL } = require('url');
 const { format } = require('util');
 const { Readable, Writable } = require('stream');
 
-const { request } = require('..');
+const { beggar: request } = require('..');
 const { createServer } = require('./server');
 
 const testingServer = createServer();
@@ -182,18 +182,30 @@ describe('Tests', () => {
     assert.equal(response.headers.location, '/redirect/2');
   });
 
-  it('should redirect if followRedirects is true (promises)', async () => {
-    const response = await request.get({ uri: baseUri + '/redirect/3', followRedirects: true });
+  it('should redirect if followAllRedirects is true (promises)', async () => {
+    const response = await request.get({ uri: baseUri + '/redirect/3', followAllRedirects: true });
     assert.equal(response.statusCode, 200);
     assert.equal(response.body, 'Welcome to the homepage');
     assert.deepEqual(response.redirects, [baseUri + '/redirect/2', baseUri + '/redirect/1', baseUri + '/home']);
   });
 
-  it('should redirect if followRedirects is true (streams)', async () => {
+  it('should redirect a maximum number of times', async () => {
+    const response = await request.get({ uri: baseUri + '/redirect/9', maxRedirects: 5 });
+    assert.equal(response.statusCode, 302);
+    assert.deepEqual(response.redirects, [
+      baseUri + '/redirect/8',
+      baseUri + '/redirect/7',
+      baseUri + '/redirect/6',
+      baseUri + '/redirect/5',
+      baseUri + '/redirect/4',
+    ]);
+  });
+
+  it('should redirect if followAllRedirects is true (streams)', async () => {
     let buffer = Buffer.from([]);
     await new Promise(resolve =>
       request
-        .get({ uri: baseUri + '/redirect/3', followRedirects: true })
+        .get({ uri: baseUri + '/redirect/3', followAllRedirects: true })
         .pipe(
           new Writable({
             write(chunk, _, cb) {
@@ -211,7 +223,7 @@ describe('Tests', () => {
     await assert.rejects(
       request({
         uri: baseUri + '/redirectToHangUp',
-        followRedirects: true,
+        followAllRedirects: true,
       }),
       {
         message: 'socket hang up',
@@ -223,7 +235,7 @@ describe('Tests', () => {
     const err = await new Promise(resolve =>
       request({
         uri: baseUri + '/redirectToHangUp',
-        followRedirects: true,
+        followAllRedirects: true,
       }).on('error', resolve)
     );
 

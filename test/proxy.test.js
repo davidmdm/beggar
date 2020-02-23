@@ -7,7 +7,7 @@ const http = require('http');
 const https = require('https');
 const assert = require('assert');
 
-const { request: beggar } = require('..');
+const { beggar } = require('..');
 
 const serverKey = fs.readFileSync(path.resolve('test', 'assets', 'server.key'));
 const serverCert = fs.readFileSync(path.resolve('test', 'assets', 'server.cert'));

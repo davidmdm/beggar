@@ -13,7 +13,8 @@ declare type Dictionary<T> = Partial<Record<string, T>>;
 export declare type RequestOptions = {
   method?: string;
   uri: Uri;
-  followRedirects?: boolean;
+  followAllRedirects?: boolean;
+  maxRedirects?: number;
   headers?: Dictionary<string | string[]>;
   auth?: {
     user: string;
@@ -51,7 +52,7 @@ type DefaultUriRequestFunction = {
   (uri: string | URL, options?: PartialRequestOptions): Connection;
 };
 
-export declare const request: RequestFunction & {
+export declare const beggar: RequestFunction & {
   get: RequestFunction;
   post: RequestFunction;
   put: RequestFunction;

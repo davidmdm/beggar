@@ -10,7 +10,7 @@ Every other http client library I tried always left me wanting and I would alway
 In my opinion, what request did better than any other http client library was its stream interface.
 
 ```javascript
-request('http://localhost:3000/myfile.txt').pipe(fs.createWriteStream('./filesystem/file.txt'));
+beggar('http://localhost:3000/myfile.txt').pipe(fs.createWriteStream('./filesystem/file.txt'));
 ```
 
 Even streaming the body into the request.
@@ -20,7 +20,7 @@ const { pipeline } = require('stream');
 
 pipeline(
   fs.createReadStream('./data.csv'),
-  request({ method: 'post', uri: 'http://localhost:3000/upload' }),
+  beggar({ method: 'post', uri: 'http://localhost:3000/upload' }),
   process.stdout,
   err => console.error(err.message)
 );
@@ -55,16 +55,8 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
    `string` (must be HTTP verb)
 - uri  
    `string` or `URL`
-- followRedirects  
-   `boolean` will follow all redirects if true
 - headers  
    `object` object containing headers
-- auth  
-  `object` object containg username and password used for Basic Authentication
-  - user
-    `string`
-  - pass
-    `string`
 - body  
   if `Buffer` | `string` | `Readable` body will be written to request as is. Other types will be sent as JSON with the Content-Type header set to `application/json`.
 - form  
@@ -75,30 +67,40 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
    `object` will use qs library to generate appropriate query. Has precedence over `option.query`. If query string is part of `options.uri` it will only write over the fields it defines but preserve the rest
 - query  
    `object` same as `options.qs` but will use the NodeJS native querystring module.
+- auth  
+  `object` object containg username and password used for Basic Authentication
+  - user
+    `string`
+  - pass
+    `string`
+- maxRedirects  
+   `number` the maximum number of redirects for begger to follow
+- followAllRedirects  
+   `boolean` will follow all redirects if true and maxRedirects not specified
 - decompress  
    `boolean` by default true. Will decompress encodings br,gzip, and deflate. Set to false to get raw buffer
 - agent  
    `http.Agent` or `false`, will be passed to underlying NodeJS ClientRequest
 - proxy  
    `string` | `URL` | { uri: `string` | `URL`; tls: `object` } Uri of the http proxy server. tls
-   options specific to the proxy can be passed here as well. 
+  options specific to the proxy can be passed here as well.
 - rejectError  
    `boolean` default false. Will reject an error containing response headers, body, statusCode and message on statusCodes outside of the 2xx range
-- raw          
+- raw  
    `boolean` default false. If true will bypass Beggars implicity body parsing and response.body will be a Buffer instance
-- tls      
-    `object` tls options that will be passed to https.request. For more documentation on tls options please read the official NodeJS documentation [https://nodejs.org/api/https.html#https_https_request_options_callback](here)
+- tls  
+   `object` tls options that will be passed to https.request. For more documentation on tls options please read the official NodeJS documentation [https://nodejs.org/api/https.html#https_https_request_options_callback](here)
 
 The request function supports two signatures:
 
 ```javascript
-request(options);
+beggar(options);
 ```
 
 and
 
 ```javascript
-request(uri, options);
+beggar(uri, options);
 ```
 
 In the latter the uri can be either a `string` or a `URL` object and will take precedence over `options.uri`
@@ -106,8 +108,8 @@ In the latter the uri can be either a `string` or a `URL` object and will take p
 For convenience all http verb methods defined in http.METHODS are attached to the request function object and will take precedence over `options.method`
 
 ```javascript
-request.get(uri);
-request.post(uri, { body: 'data' });
+beggar.get(uri);
+beggar.post(uri, { body: 'data' });
 ```
 
 #### Examples
@@ -115,13 +117,13 @@ request.post(uri, { body: 'data' });
 Bring begger's request function into scope:
 
 ```javascript
-const { request } = require('beggar');
+const { beggar } = require('beggar');
 ```
 
 Using the native http Incoming message object
 
 ```javascript
-const req = request.post('http://localhost:3000');
+const req = beggar.post('http://localhost:3000');
 // If you don't use promises or stream interface you must remember to end your request
 // Exceptionally if the request is a GET beggar will know no data shall be written and
 // will close it for you.
@@ -138,8 +140,8 @@ Using the stream interface (same as Mikael's request)
 ```javascript
 // It is best to use pipeline to assure that streams get closed properly on error. For simplicity in other examples we shall use the readable pipe method.
 pipeline(
-  request.get('http://example.com/file.txt'),
-  request.post('http://bucket.com/upload'),
+  beggar.get('http://example.com/file.txt'),
+  beggar.post('http://bucket.com/upload'),
   fs.createWriteStream('./response.json'),
   err => { ... }
 )
@@ -149,26 +151,26 @@ pipeline(
 Using promises and `async/await`
 
 ```javascript
-const response = await request.get('http://localhost:3000');
+const response = await beggar.get('http://localhost:3000');
 // response.body will be parsed according to the response header Content-Type and will either be a Javascript Object,
 // a string or an instance of Buffer.
 // If options.followRedirects was set to true and redirects occured they urls will be stored on response.redirects
 ```
 
-_(note)_ for those interested: request(..) does not return an instance of a Promise, However it is thenable/catchable and therefore async/await compliant.
+_(note)_ for those interested: beggar(..) does not return an instance of a Promise, However it is thenable/catchable and therefore async/await compliant.
 
 Mixing them together
 
 ```javascript
 const file = fs.createReadStream('./file.txt');
-const request = file.pipe(request.put('http://destination.com'));
+const request = file.pipe(beggar.put('http://destination.com'));
 const response = await request;
 ```
 
 Beggar also supports creating new instance of request with default options.
 
 ```javascript
-const authenticatedRequest = request.defaults({ auth: { user: 'username', pass: 'password' } });
+const authenticatedRequest = beggar.defaults({ auth: { user: 'username', pass: 'password' } });
 
 // authenticatedRequest will post to my service with the auth value set.
 authenticatedRequest.post('https://myservice.com/upload', { body: 'data' });
@@ -181,7 +183,7 @@ authenticatedRequest.post({
 });
 ```
 
-Note that the `defaults` utility only exists on the root request function and not on the functions created by
+Note that the `defaults` utility only exists on the root beggar function and not on the functions created by
 defaults.
 
 ### RoadMap
@@ -189,15 +191,7 @@ defaults.
 There are some things that could be improved upon. A few that come to mind:
 
 - multi-part formdata options
-- redirect options
-- proxy support (testing and TLS options)
 - cookie support (if requested)
-- perhaps utility functions that bypass returning a response object all together
-  ```javascript
-  const obj = await request.get(uri).asJSON();
-  const str = await request.get(uri).asString();
-  const buff = await request.get(uri).asBuffer();
-  ```
 
 ### Contributing
 

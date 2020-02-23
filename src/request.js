@@ -14,6 +14,7 @@ const querystring = require('querystring');
 const FormData = require('form-data');
 
 const { Connection } = require('./connection');
+const { sanitizeOpts } = require('./options');
 
 const version = require('../package.json').version;
 const methods = http.METHODS.map(method => method.toLowerCase());
@@ -108,7 +109,7 @@ const createConnection = options => {
 
   const responsePromise = new Promise((resolve, reject) =>
     req.on('response', resp => {
-      if (options.followRedirects && resp.statusCode >= 301 && resp.statusCode <= 303) {
+      if (options.maxRedirects > 0 && resp.statusCode >= 301 && resp.statusCode <= 303) {
         const location = resp.headers.location;
         const qualifiedRedirection = location.startsWith('/') ? options.uri.origin + location : location;
 
@@ -118,7 +119,7 @@ const createConnection = options => {
         resp.on('data', () => {});
 
         return request
-          .get(qualifiedRedirection, { followRedirects: true })
+          .get(qualifiedRedirection, { maxRedirects: options.maxRedirects - 1 })
           .on('response', nextResp => {
             nextResp.redirects = [qualifiedRedirection, ...(nextResp.redirects || [])];
             resolve(nextResp);
@@ -147,63 +148,6 @@ const createConnection = options => {
 function isUri(value) {
   return typeof value === 'string' || value instanceof URL;
 }
-
-const getProxyUri = proxy => {
-  if (!proxy) {
-    return undefined;
-  }
-  const uri = proxy.uri || proxy;
-  return uri instanceof URL ? uri : new URL(uri);
-};
-
-const sanitizeTlsOptions = tls => {
-  if (!tls) {
-    return undefined;
-  }
-  return {
-    cert: tls.cert,
-    key: tls.key,
-    ca: tls.ca,
-    ciphers: tls.ciphers,
-    clientCertEngine: tls.clientCertEngine,
-    privateKeyEngine: tls.privateKeyEngine,
-    privateKeyIdentifier: tls.privateKeyIdentifier,
-    maxVersion: tls.maxVersion,
-    minVersion: tls.minVersion,
-    passphrase: tls.passphrase,
-    secureOptions: tls.secureOptions,
-    secureProtocol: tls.secureProtocol,
-    sessionIdContext: tls.sessionIdContext,
-    pfx: tls.pfx,
-    crl: tls.crl,
-    dhparam: tls.dhparam,
-    ecdhCurve: tls.ecdhCurve,
-    honorCipherOrder: tls.honorCipherOrder,
-    rejectUnauthorized: tls.rejectUnauthorized,
-    servername: tls.servername,
-  };
-};
-
-const sanitizeOpts = options => {
-  return {
-    method: options.method,
-    headers: options.headers,
-    uri: options.uri instanceof URL ? options.uri : new URL(options.uri),
-    proxy: getProxyUri(options.proxy),
-    proxyTls: options.proxy && sanitizeTlsOptions(options.proxy.tls),
-    followRedirects: options.followRedirects === true,
-    auth: options.auth,
-    body: options.body,
-    form: options.form,
-    formData: options.formData,
-    qs: options.qs,
-    query: options.query,
-    decompress: options.decompress !== false,
-    rejectError: options.rejectError === true,
-    raw: options.raw === true,
-    tls: sanitizeTlsOptions(options.tls),
-  };
-};
 
 function request(uri, opts = {}) {
   const options = sanitizeOpts(isUri(uri) ? { ...opts, uri } : uri);

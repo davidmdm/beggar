@@ -2,6 +2,4 @@
 
 const { request } = require('./src/request');
 
-module.exports = {
-  request,
-};
+module.exports = { beggar: request };
