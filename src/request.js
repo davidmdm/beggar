@@ -84,11 +84,7 @@ const createProxiedConnection = options => {
           },
         })
         .on('error', err => conn.emit('error', err))
-        .on('response', response => {
-          response.on('error', err => conn.emit('error', err));
-          response.on('close', () => conn.emit('close'));
-          conn.emit('response', response);
-        });
+        .on('response', response => conn.emit('response', response));
       conn.emit('request', req);
       passthrough.pipe(req);
     })
@@ -132,15 +128,11 @@ const createConnection = options => {
 
   const conn = new Connection(req, options);
   conn.emit('request', req);
-  req.on('error', err => conn.emit('error', err));
 
-  responsePromise
-    .then(resp => {
-      conn.emit('response', resp);
-      resp.on('close', () => conn.emit('close'));
-      resp.on('error', err => conn.emit('error', err));
-    })
-    .catch(err => conn.emit('error', err));
+  responsePromise.then(
+    response => conn.emit('response', response),
+    err => conn.emit('error', err)
+  );
 
   return conn;
 };

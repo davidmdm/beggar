@@ -524,4 +524,10 @@ describe('Tests', () => {
     const expectedAuth = 'Basic ' + Buffer.from('patate:aubergine').toString('base64');
     assert.equal(resp.body.request.headers.authorization, expectedAuth);
   });
+
+  it.only('should make a slow request', async function() {
+    this.timeout(15000);
+    const resp = await request.get(baseUri + '/slow').cancel();
+    assert.deepEqual(resp.body, 'hello from slow source');
+  });
 });

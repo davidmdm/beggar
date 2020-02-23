@@ -152,8 +152,26 @@ const createServer = () => {
         .end('<html><body>Error Occured!!!</body></html>');
     }
 
+    if (req.url === '/slow') {
+      return new SlowSource(5000).pipe(res.writeHead(200, { 'Content-Type': 'text/plain' }));
+    }
+
     return res.writeHead(404).end();
   });
 };
+
+class SlowSource extends Readable {
+  constructor(duration) {
+    super();
+    this.duration = duration;
+    this.chunks = 'hello from slow source'.split('');
+    this.length = this.chunks.length;
+  }
+  _read() {
+    setTimeout(() => {
+      this.push(this.chunks.shift() || null);
+    }, Math.ceil(this.duration / this.length));
+  }
+}
 
 module.exports = { createServer };

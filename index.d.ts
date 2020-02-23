@@ -39,7 +39,7 @@ export declare type ResolvedResponse = IncomingMessage & {
   body: any;
   redirects?: string[];
 };
-export declare type Connection = Duplex & Promise<ResolvedResponse>;
+export declare type Connection = Duplex & Promise<ResolvedResponse> & { cancel: () => Connection };
 
 export declare type RequestFunction = {
   (options: RequestOptions): Connection;

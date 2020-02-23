@@ -1,7 +1,6 @@
 'use strict';
 
 const http = require('http');
-const { format } = require('util');
 const { Duplex } = require('stream');
 
 const zlib = require('zlib');
@@ -57,6 +56,12 @@ class HttpError extends Error {
   }
 }
 
+class CancelError extends Error {
+  constructor() {
+    super('Request Cancelled');
+  }
+}
+
 function parseResponseBuffer(contentType = '', buffer) {
   if (contentType.startsWith('application/json')) {
     return buffer.length > 0 ? JSON.parse(buffer.toString()) : undefined;
@@ -106,12 +111,16 @@ class Connection extends Duplex {
     };
 
     this.once('response', response => {
+      response.once('close', () => this.emit('close'));
+      response.once('error', err => this.emit('error', err));
       this.incomingMessage = response;
       this.source = opts.decompress ? applyDecompression(response) : response;
       this.source.on('end', () => this.push(null));
       this.emit('_source_');
     })
       .once('request', request => {
+        request.once('error', err => this.emit('error', err));
+        request.once('abort', () => this.emit('abort'));
         this.outgoingMessage = request;
         for (const [name, value] of Object.entries(this.outgoingHeaders)) {
           this.outgoingMessage.setHeader(name, value);
@@ -139,7 +148,18 @@ class Connection extends Duplex {
     }
   }
 
+  cancel() {
+    if (!this.outgoingMessage) {
+      return this.once('request', () => request => request.abort());
+    }
+    this.outgoingMessage.abort();
+    return this;
+  }
+
   then(fn, handle) {
+    if (this.outgoingMessage && this.outgoingMessage.aborted) {
+      return Promise.reject(new CancelError()).catch(handle);
+    }
     if (this.responsePromise) {
       return this.responsePromise.then(fn, handle);
     }
@@ -157,7 +177,10 @@ class Connection extends Duplex {
         response.body = this.opts.raw ? buffer : parseResponseBuffer(response.headers['content-type'], buffer);
         return response;
       })(),
-      new Promise((_, reject) => this.once('error', reject)),
+      new Promise((_, reject) => {
+        this.once('error', reject);
+        this.once('abort', () => reject(new CancelError()));
+      }),
     ]);
     return this.responsePromise.then(fn, handle);
   }
@@ -170,4 +193,4 @@ class Connection extends Duplex {
   }
 }
 
-module.exports = { Connection };
+module.exports = { Connection, CancelError };
