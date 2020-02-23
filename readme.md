@@ -10,7 +10,7 @@ Every other http client library I tried always left me wanting and I would alway
 In my opinion, what request did better than any other http client library was its stream interface.
 
 ```javascript
-beggar('http://localhost:3000/myfile.txt').pipe(fs.createWriteStream('./filesystem/file.txt'));
+request('http://localhost:3000/myfile.txt').pipe(fs.createWriteStream('./filesystem/file.txt'));
 ```
 
 Even streaming the body into the request.
@@ -20,7 +20,7 @@ const { pipeline } = require('stream');
 
 pipeline(
   fs.createReadStream('./data.csv'),
-  beggar({ method: 'post', uri: 'http://localhost:3000/upload' }),
+  request({ method: 'post', uri: 'http://localhost:3000/upload' }),
   process.stdout,
   err => console.error(err.message)
 );

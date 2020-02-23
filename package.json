@@ -1,6 +1,6 @@
 {
   "name": "beggar",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "",
   "main": "index.js",
   "typings": "index.d.ts",
@@ -22,7 +22,7 @@
     "typescript": "^3.7.5"
   },
   "scripts": {
-    "pub": "npm i && npm t && rm -rf ./node_modules && npm i --production && npm publish",
+    "pub": "npm i && npm t && npm publish",
     "test": "mocha 'test/**/*test.js' --exit",
     "coverage": "nyc mocha 'test/**/*test.js' --exit"
   },
