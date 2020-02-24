@@ -121,7 +121,15 @@ class Connection extends Duplex {
     })
       .once('request', request => {
         request.once('error', err => this.emit('error', err));
-        request.once('abort', () => this.emit('abort'));
+        request.once('abort', () => {
+          this.emit('abort');
+          if (!this.responsePromise) {
+            const err = new CancelError();
+            this.responsePromise = Promise.reject(err);
+            this.responsePromise.catch(() => {}); // avoid throwing unhandled rejection
+            setImmediate(() => this.emit('error', err)); // Why does this fail a test if no setImmediate???
+          }
+        });
         this.outgoingMessage = request;
         for (const [name, value] of Object.entries(this.outgoingHeaders)) {
           this.outgoingMessage.setHeader(name, value);
@@ -153,37 +161,40 @@ class Connection extends Duplex {
     if (!this.outgoingMessage) {
       this.once('request', () => request => request.abort());
     } else {
-      this.outgoingMessage.abort();
+      // if cancel is called synchonously on connection, errors might be thrown before
+      // there was a chance to register handlers. Abort asynchronously.
+      setImmediate(() => this.outgoingMessage.abort());
     }
     this.isCancelled = true;
   }
 
   then(fn, handle) {
-    if (this.outgoingMessage && this.outgoingMessage.aborted) {
-      return Promise.reject(new CancelError()).catch(handle);
-    }
     if (this.responsePromise) {
       return this.responsePromise.then(fn, handle);
     }
-    this.responsePromise = Promise.race([
-      (async () => {
-        if (!this.isPipedTo) {
-          this.end();
-        }
-        const response = this.incomingMessage || (await new Promise(resolve => this.once('response', resolve)));
-        const buffer = await readableToBuffer(this);
-        if (this.opts.rejectError && !statusOk(response.statusCode)) {
-          this.responseError = getResponseError(response, buffer);
-          throw this.responseError;
-        }
-        response.body = this.opts.raw ? buffer : parseResponseBuffer(response.headers['content-type'], buffer);
-        return response;
-      })(),
-      new Promise((_, reject) => {
-        this.once('error', reject);
-        this.once('abort', () => reject(new CancelError()));
-      }),
-    ]);
+    if (this.outgoingMessage && this.outgoingMessage.aborted) {
+      this.responsePromise = Promise.reject(new CancelError());
+    } else {
+      this.responsePromise = Promise.race([
+        (async () => {
+          if (!this.isPipedTo) {
+            this.end();
+          }
+          const response = this.incomingMessage || (await new Promise(resolve => this.once('response', resolve)));
+          const buffer = await readableToBuffer(this);
+          if (this.opts.rejectError && !statusOk(response.statusCode)) {
+            this.responseError = getResponseError(response, buffer);
+            throw this.responseError;
+          }
+          response.body = this.opts.raw ? buffer : parseResponseBuffer(response.headers['content-type'], buffer);
+          return response;
+        })(),
+        new Promise((_, reject) => {
+          this.once('error', reject);
+          this.once('abort', () => reject(new CancelError()));
+        }),
+      ]);
+    }
     return this.responsePromise.then(fn, handle);
   }
 

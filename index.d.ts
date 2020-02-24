@@ -35,6 +35,8 @@ export declare type RequestOptions = {
 
 type PartialRequestOptions = Partial<RequestOptions>;
 
+export declare class CancelError implements Error {}
+
 export declare type ResolvedResponse = IncomingMessage & {
   body: any;
   redirects?: string[];
