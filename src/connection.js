@@ -100,6 +100,7 @@ class Connection extends Duplex {
     this.outgoingMessage = null;
     this.responsePromise = null;
     this.outgoingHeaders = {};
+    this.isCancelled = false;
 
     const pipe = Duplex.prototype.pipe.bind(this);
     this.isPipedTo = false;
@@ -150,10 +151,11 @@ class Connection extends Duplex {
 
   cancel() {
     if (!this.outgoingMessage) {
-      return this.once('request', () => request => request.abort());
+      this.once('request', () => request => request.abort());
+    } else {
+      this.outgoingMessage.abort();
     }
-    this.outgoingMessage.abort();
-    return this;
+    this.isCancelled = true;
   }
 
   then(fn, handle) {

@@ -525,9 +525,19 @@ describe('Tests', () => {
     assert.equal(resp.body.request.headers.authorization, expectedAuth);
   });
 
-  it.only('should make a slow request', async function() {
-    this.timeout(15000);
-    const resp = await request.get(baseUri + '/slow').cancel();
-    assert.deepEqual(resp.body, 'hello from slow source');
+  it('should cancel a request preemptively', async function() {
+    this.timeout(10000);
+    const conn = request.get(baseUri + '/slow');
+    conn.cancel();
+    await assert.rejects(conn, { message: 'Request Cancelled' });
+    assert.equal(conn.isCancelled, true);
+  });
+
+  it('should cancel a request midflight', async function() {
+    this.timeout(10000);
+    const conn = request.get(baseUri + '/slow');
+    setTimeout(() => conn.cancel(), 2000);
+    await assert.rejects(conn, { message: 'Request Cancelled' });
+    assert.equal(conn.isCancelled, true);
   });
 });
