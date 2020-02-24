@@ -225,7 +225,60 @@ value
 ----------------------------593029851590825188224183--
 ```
 
+#### Query Strings
+Beggar lets you override the given query string programmatically. The next example shall only override the given fields. The qs option uses the [qs](https://www.npmjs.com/package/qs) library for query string encoding. The query options uses the native NodeJS querystring module.
+```javascript
+beggar.get({
+   uri: 'https://example.com?override=willBeOverwritten&stable=willStayAsIs', 
+   qs: { override: 'new value' },
+);
 
+// Using the native NodeJS querystring module for query string encoding/decoding
+beggar.get({
+   uri: 'https://example.com?override=willBeOverwritten&stable=willStayAsIs', 
+   query: { override: 'new value' },
+);
+```
+
+#### Basic Authentication
+```javascript
+beggar.get('https://protected.com', { auth: { user: 'username', pass: 'password' } });
+```
+
+#### Http Proxies
+Simply supply the proxy uri and beggar will handle the proxied request. Provide the proxy's basic auth within the URI and it shall be used for Proxy-Authorization Header on proxy connect request.
+```javascript
+beggar.get({
+   uri: 'https://server.com',
+   proxy: 'http://username:password@proxy.com:2345',
+})
+```
+
+#### Request Cancellation
+A beggar connection/request object can be cancelled. This will abort the underlying request. Once aborted the beggar request will emit `abort` and `error` with CancelError.
+```javascript
+const { beggar, CancelError } = require('beggar');
+
+const request = beggar.get('https://example.com');
+request.cancel();
+
+request.once('abort', () => console.log('Request aborted'));
+request.once('error', err => {
+   console.log(err.message); // will log "Request Cancelled"
+   console.log(err instanceof CancelError); // true
+   console.log(request.isCancelled); // true
+});
+
+request
+  .then(resp => {
+     // response if finished before cancel was called.
+  })
+  .catch(err => {
+     // same instance of CancelError as detected above in error listener
+  });
+```
+
+#### Defaults
 Beggar also supports creating new instance of request with default options.
 
 ```javascript
