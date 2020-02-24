@@ -258,15 +258,15 @@ describe('Tests', () => {
     jsonReadable.push(JSON.stringify({ hello: 'world' }));
     jsonReadable.push(null);
 
-    const options = {
+    const formResponse = await beggar({
       method: 'post',
       uri: baseUri + '/multipart',
       formData: {
         jsonReadable,
         key: 'value',
       },
-    };
-    const formResponse = await beggar(options);
+    });
+
     assert.equal(formResponse.statusCode, 200);
     assert.deepEqual(formResponse.body, [
       {
@@ -549,8 +549,12 @@ describe('Tests', () => {
     this.timeout(10000);
     const conn = beggar.get(baseUri + '/slow');
     setTimeout(() => conn.cancel(), 1000);
-    await new Promise(resolve => conn.once('abort', resolve));
-    const err = await new Promise(resolve => conn.once('error', resolve));
+    const abortPromise = new Promise(resolve => conn.once('abort', resolve));
+    const errPromise = new Promise(resolve => conn.once('error', resolve));
+
+    await abortPromise;
+    const err = await errPromise;
+
     assert.equal(err instanceof CancelError, true);
     //@ts-ignore
     assert.equal(conn.outgoingMessage.aborted, true);

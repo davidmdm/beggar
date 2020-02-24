@@ -43,7 +43,7 @@ Modules like request-promise partially solve this issue but then we lose the str
 ### Goal
 
 Beggar aims to offer a similar API to Mikael's request and to remain true to its bidirectional streaming support, whilst
-being promise compatible and to play well with async/await natively.
+being promise compatible and play well with async/await natively.
 
 I would like to keep the module as thin a wrapper over NodeJS's http.ClientRequest and http.IncomingMessage as possible.
 
@@ -58,7 +58,7 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
 - headers  
    `object` object containing headers
 - body  
-  if `Buffer` | `string` | `Readable` body will be written to request as is. Other types will be sent as JSON with the Content-Type header set to `application/json`.
+   `Buffer` | `string` | `Readable` if body is a string or buffer the body will be written to the underlying request request as is. Other types will be stringified and sent as JSON with the Content-Type header set to `application/json`.
 - form  
   `object` will be url-encoded using the qs library and sent with Content-Type header set to `application/x-www-form-urlencoded`
 - formData  
@@ -112,7 +112,7 @@ beggar.get(uri);
 beggar.post(uri, { body: 'data' });
 ```
 
-#### Examples
+### Examples
 
 Bring begger's request function into scope:
 
@@ -120,6 +120,7 @@ Bring begger's request function into scope:
 const { beggar } = require('beggar');
 ```
 
+#### Basic Usage
 Using the native http Incoming message object
 
 ```javascript
@@ -166,6 +167,64 @@ const file = fs.createReadStream('./file.txt');
 const request = file.pipe(beggar.put('http://destination.com'));
 const response = await request;
 ```
+
+#### Sending Headers
+
+```javascript
+beggar.get(uri, { headers: { 'Accept-Encoding': 'application/json' } })
+```
+
+#### Sending request with a body
+```javascript
+// Note that GET requests will not send any payload even if they are passed as options
+// Beggar will automatically add the Content-Length to the request for you if it can infer it like in this example.
+beggar.post({ 
+   uri: 'https://example.com/upload',
+   headers: { 'Content-Type': 'text/plain' },
+   body: 'my string payload that could equally be a buffer',
+})
+
+// Here the Content-Type will be set as application/json by beggar and the content-length inferred as well. 
+beggar.put({
+   uri: 'https://example.com/resource/1',
+   body: { resource: 'values' },
+})
+
+// Beggar also support sending readable streams via the body options
+beggar.post({
+   uri: 'https://example.com/fileUpload',
+   body: fs.createReadStream('./path/to/file'),
+})
+```
+
+#### Sending forms
+Beggar will automatically send form-encode the body and set the appropriate Content-Type when the body is sent via the form option.
+```javascript
+// The following transates to a request with Content-Type: application/x-www-form-urlencoded
+// and body: key=value&key2=value2
+beggar.post({
+   uri: 'https://example.com/form',
+   form: { key: 'value', key2: 'value2' },
+})
+```
+
+#### Multipart form data
+Beggar uses formData under the hood to generate multipart requests. Simply provide an object where the keys will be interpreted as name and filename and the values the body of each part.
+```javascript
+beggar.post({
+   uri: 'https://example.com/form',
+   formData: { key: 'value' },
+})
+```
+This will write something similar to the request:
+```
+----------------------------593029851590825188224183
+Content-Disposition: form-data; name="key"; filename="key"
+
+value
+----------------------------593029851590825188224183--
+```
+
 
 Beggar also supports creating new instance of request with default options.
 

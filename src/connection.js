@@ -127,7 +127,7 @@ class Connection extends Duplex {
             const err = new CancelError();
             this.responsePromise = Promise.reject(err);
             this.responsePromise.catch(() => {}); // avoid throwing unhandled rejection
-            setImmediate(() => this.emit('error', err)); // Why does this fail a test if no setImmediate???
+            this.emit('error', err);
           }
         });
         this.outgoingMessage = request;
