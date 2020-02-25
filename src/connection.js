@@ -26,7 +26,7 @@ function drain(src, dst) {
     for (;;) {
       const chunk = src.read();
       if (chunk === null) {
-        break;
+        return;
       }
       dst.push(chunk);
     }

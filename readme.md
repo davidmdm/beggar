@@ -47,6 +47,20 @@ being promise compatible and play well with async/await natively.
 
 I would like to keep the module as thin a wrapper over NodeJS's http.ClientRequest and http.IncomingMessage as possible.
 
+### Supported features
+
+- Stream support
+- Promise support via `then` and `catch`
+- Implicit parsing of response body (json, string, buffer)
+- form and multipart-form requests
+- Specify number of maximum redirections
+- Basic Auth
+- Automatic decompression of gzip, deflate and br compressions
+- Can reject non 2xx statusCode responses automatically
+- Proxying support for http proxies
+- Request Cancelation
+- Extending with user provided default options
+
 ### Usage
 
 #### Supported Options
@@ -121,6 +135,7 @@ const { beggar } = require('beggar');
 ```
 
 #### Basic Usage
+
 Using the native http Incoming message object
 
 ```javascript
@@ -171,52 +186,59 @@ const response = await request;
 #### Sending Headers
 
 ```javascript
-beggar.get(uri, { headers: { 'Accept-Encoding': 'application/json' } })
+beggar.get(uri, { headers: { 'Accept-Encoding': 'application/json' } });
 ```
 
 #### Sending request with a body
+
 ```javascript
 // Note that GET requests will not send any payload even if they are passed as options
 // Beggar will automatically add the Content-Length to the request for you if it can infer it like in this example.
-beggar.post({ 
-   uri: 'https://example.com/upload',
-   headers: { 'Content-Type': 'text/plain' },
-   body: 'my string payload that could equally be a buffer',
-})
+beggar.post({
+  uri: 'https://example.com/upload',
+  headers: { 'Content-Type': 'text/plain' },
+  body: 'my string payload that could equally be a buffer',
+});
 
-// Here the Content-Type will be set as application/json by beggar and the content-length inferred as well. 
+// Here the Content-Type will be set as application/json by beggar and the content-length inferred as well.
 beggar.put({
-   uri: 'https://example.com/resource/1',
-   body: { resource: 'values' },
-})
+  uri: 'https://example.com/resource/1',
+  body: { resource: 'values' },
+});
 
 // Beggar also support sending readable streams via the body options
 beggar.post({
-   uri: 'https://example.com/fileUpload',
-   body: fs.createReadStream('./path/to/file'),
-})
+  uri: 'https://example.com/fileUpload',
+  body: fs.createReadStream('./path/to/file'),
+});
 ```
 
 #### Sending forms
+
 Beggar will automatically send form-encode the body and set the appropriate Content-Type when the body is sent via the form option.
+
 ```javascript
 // The following transates to a request with Content-Type: application/x-www-form-urlencoded
 // and body: key=value&key2=value2
 beggar.post({
-   uri: 'https://example.com/form',
-   form: { key: 'value', key2: 'value2' },
-})
+  uri: 'https://example.com/form',
+  form: { key: 'value', key2: 'value2' },
+});
 ```
 
 #### Multipart form data
+
 Beggar uses formData under the hood to generate multipart requests. Simply provide an object where the keys will be interpreted as name and filename and the values the body of each part.
+
 ```javascript
 beggar.post({
-   uri: 'https://example.com/form',
-   formData: { key: 'value' },
-})
+  uri: 'https://example.com/form',
+  formData: { key: 'value' },
+});
 ```
+
 This will write something similar to the request:
+
 ```
 ----------------------------593029851590825188224183
 Content-Disposition: form-data; name="key"; filename="key"
@@ -226,36 +248,43 @@ value
 ```
 
 #### Query Strings
+
 Beggar lets you override the given query string programmatically. The next example shall only override the given fields. The qs option uses the [qs](https://www.npmjs.com/package/qs) library for query string encoding. The query options uses the native NodeJS querystring module.
+
 ```javascript
 beggar.get({
-   uri: 'https://example.com?override=willBeOverwritten&stable=willStayAsIs', 
+   uri: 'https://example.com?override=willBeOverwritten&stable=willStayAsIs',
    qs: { override: 'new value' },
 );
 
 // Using the native NodeJS querystring module for query string encoding/decoding
 beggar.get({
-   uri: 'https://example.com?override=willBeOverwritten&stable=willStayAsIs', 
+   uri: 'https://example.com?override=willBeOverwritten&stable=willStayAsIs',
    query: { override: 'new value' },
 );
 ```
 
 #### Basic Authentication
+
 ```javascript
 beggar.get('https://protected.com', { auth: { user: 'username', pass: 'password' } });
 ```
 
 #### Http Proxies
+
 Simply supply the proxy uri and beggar will handle the proxied request. Provide the proxy's basic auth within the URI and it shall be used for Proxy-Authorization Header on proxy connect request.
+
 ```javascript
 beggar.get({
-   uri: 'https://server.com',
-   proxy: 'http://username:password@proxy.com:2345',
-})
+  uri: 'https://server.com',
+  proxy: 'http://username:password@proxy.com:2345',
+});
 ```
 
 #### Request Cancellation
+
 A beggar connection/request object can be cancelled. This will abort the underlying request. Once aborted the beggar request will emit `abort` and `error` with CancelError.
+
 ```javascript
 const { beggar, CancelError } = require('beggar');
 
@@ -264,21 +293,22 @@ request.cancel();
 
 request.once('abort', () => console.log('Request aborted'));
 request.once('error', err => {
-   console.log(err.message); // will log "Request Cancelled"
-   console.log(err instanceof CancelError); // true
-   console.log(request.isCancelled); // true
+  console.log(err.message); // will log "Request Cancelled"
+  console.log(err instanceof CancelError); // true
+  console.log(request.isCancelled); // true
 });
 
 request
   .then(resp => {
-     // response if finished before cancel was called.
+    // response if finished before cancel was called.
   })
   .catch(err => {
-     // same instance of CancelError as detected above in error listener
+    // same instance of CancelError as detected above in error listener
   });
 ```
 
 #### Defaults
+
 Beggar also supports creating new instance of request with default options.
 
 ```javascript
