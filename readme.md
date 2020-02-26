@@ -60,6 +60,7 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
 - Proxying support for http proxies
 - Request Cancelation
 - Extending with user provided default options
+- Simple mode where responses are resolved to their body and errors are rejected
 
 ### Usage
 
@@ -100,6 +101,8 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
   options specific to the proxy can be passed here as well.
 - rejectError  
    `boolean` default false. Will reject an error containing response headers, body, statusCode and message on statusCodes outside of the 2xx range
+- simple  
+   `boolean` default false. When true will resolve the body without the response object. In this mode if a non 2XX range status response is returned it shall be rejected regardless of whether rejectError is set to false.
 - raw  
    `boolean` default false. If true will bypass Beggars implicity body parsing and response.body will be a Buffer instance
 - tls  
@@ -305,6 +308,24 @@ request
   .catch(err => {
     // same instance of CancelError as detected above in error listener
   });
+```
+
+#### Simple mode
+
+Often when dealing with requests we simply want the return value of the body and not the entire response object with headers and statusCodes.
+In this mode non 2XX statusCode responses will be rejected regardless of whether `options.rejectError` is explicitly set to false.
+
+```javascript
+const body = await beggar.get('https://www.example.com', { simple: true });
+// body is parsed response.body
+```
+
+By default simple is false, and beggar will return a response object. You can override this with a new defaulted beggar instance
+
+```javascript
+const request = beggar.defaults({ simple: true });
+const body = request.get('https://www.google.com');
+// Here body is google's homepage as a string
 ```
 
 #### Defaults

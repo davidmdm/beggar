@@ -182,11 +182,15 @@ class Connection extends Duplex {
           }
           const response = this.incomingMessage || (await new Promise(resolve => this.once('response', resolve)));
           const buffer = await readableToBuffer(this);
-          if (this.opts.rejectError && !statusOk(response.statusCode)) {
+          if ((this.opts.rejectError || this.opts.simple) && !statusOk(response.statusCode)) {
             this.responseError = getResponseError(response, buffer);
             throw this.responseError;
           }
-          response.body = this.opts.raw ? buffer : parseResponseBuffer(response.headers['content-type'], buffer);
+          const body = this.opts.raw ? buffer : parseResponseBuffer(response.headers['content-type'], buffer);
+          if (this.opts.simple) {
+            return body;
+          }
+          response.body = body;
           return response;
         })(),
         new Promise((_, reject) => {

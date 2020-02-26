@@ -62,6 +62,7 @@ const sanitizeOpts = options => {
     rejectError: options.rejectError === true,
     raw: options.raw === true,
     tls: sanitizeTlsOptions(options.tls),
+    simple: options.simple === true,
   };
 };
 

@@ -578,4 +578,34 @@ describe('Tests', () => {
     assert.equal(err1.message, 'Request Cancelled');
     assert.equal(err1, err2);
   });
+
+  it('should only return body if request is simple - buffer', async () => {
+    const body = await beggar.post(baseUri + '/echo', { body: 'simple test', simple: true });
+    assert.equal(body instanceof Buffer, true);
+    assert.equal(body.toString(), 'simple test');
+  });
+
+  it('should only return body if request is simple - text', async () => {
+    const body = await beggar.post(baseUri + '/echo-text', { body: 'simple test', simple: true });
+    assert.equal(body, 'simple test');
+  });
+
+  it('should only return body if request is simple - json', async () => {
+    const body = await beggar.post(baseUri + '/echo-json', { body: { simple: 'test' }, simple: true });
+    assert.deepEqual(body, { simple: 'test' });
+  });
+
+  it('should reject statusCode errors when simple even if rejectError is false', async () => {
+    await assert.rejects(
+      beggar.get({
+        uri: baseUri + '/400-json',
+        simple: true,
+        rejectError: false,
+      }),
+      {
+        statusCode: 400,
+        message: 'custom error message',
+      }
+    );
+  });
 });
