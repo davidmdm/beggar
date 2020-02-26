@@ -328,6 +328,26 @@ const body = request.get('https://www.google.com');
 // Here body is google's homepage as a string
 ```
 
+#### Raw mode
+
+By default Beggar shall apply JSON.parse to a response body where the response Content-Type is application/json, or return the string value of the buffer if the Content-Type is text/\*. To escape this behaviour and simply have the returned body always be a buffer you can set `options.raw` to true.
+
+```javascript
+// Buffer will be the google homepage as a Buffer and not a string as it would otherwise have been since the Content-Type is text/html.
+const buffer = await beggar.get('https://www.google.com', { simple: true, raw: true });
+```
+
+#### Decompression
+
+By default beggar will automatically decompress payloads that have been compressed by gzip, br, or deflate. This can be deactivated by setting `options.decompress` to false.
+
+```javascript
+const response = await beggar.get('https//httpbin.org/brotli', { decompress: false });
+// response.body here will be the brotli compressed buffer.
+```
+
+Note that if decompress is false but the content is not encoded Beggar will continue to implicitly parse the response. If the content is encoded or invalid encodings are contained in the Content-Encoding header, Beggar will simply set the body as a Buffer.
+
 #### Defaults
 
 Beggar also supports creating new instance of request with default options.
@@ -355,6 +375,7 @@ There are some things that could be improved upon. A few that come to mind:
 
 - multi-part formdata options
 - cookie support (if requested)
+- XML parsing support
 
 ### Contributing
 

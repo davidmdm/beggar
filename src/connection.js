@@ -11,14 +11,25 @@ const decompressions = {
   br: zlib.createBrotliDecompress,
 };
 
-function applyDecompression(response) {
-  if (!response.headers['content-encoding']) {
-    return response;
-  }
-  return response.headers['content-encoding']
+const validEncodings = ['gzip', 'br', 'deflate', 'identity'];
+function getValidEncodings(contentEncoding = '') {
+  const encodings = contentEncoding
     .split(/\s*,\s*/)
     .filter(enc => enc && enc !== 'identity')
-    .reduceRight((acc, enc) => acc.pipe(decompressions[enc]()), response);
+    .map(enc => enc.toLowerCase());
+  if (encodings.some(enc => !validEncodings.includes(enc))) {
+    // Signal invalid encodings by returning null
+    return null;
+  }
+  return encodings;
+}
+
+function applyDecompression(response) {
+  const encodings = getValidEncodings(response.headers['content-encoding']);
+  if (encodings === null) {
+    return response;
+  }
+  return encodings.reduceRight((acc, enc) => acc.pipe(decompressions[enc]()), response);
 }
 
 function drain(src, dst) {
@@ -186,7 +197,13 @@ class Connection extends Duplex {
             this.responseError = getResponseError(response, buffer);
             throw this.responseError;
           }
-          const body = this.opts.raw ? buffer : parseResponseBuffer(response.headers['content-type'], buffer);
+
+          const encodings = getValidEncodings(response.headers['content-encoding']);
+          // Encodings is null when invalid encodings are contained in Content-Encoding
+          const shouldUseRawBuffer =
+            this.opts.raw || encodings === null || (this.opts.decompress === false && encodings.length > 0);
+
+          const body = shouldUseRawBuffer ? buffer : parseResponseBuffer(response.headers['content-type'], buffer);
           if (this.opts.simple) {
             return body;
           }

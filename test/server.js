@@ -129,10 +129,17 @@ const createServer = () => {
     }
 
     if (req.url.startsWith('/compression?')) {
-      const { encodings } = querystring.parse(req.url.slice(13));
-      res.setHeader('Content-Encoding', encodings.split());
+      const { encodings, contentType } = querystring.parse(req.url.slice(13));
+      if (contentType) {
+        res.setHeader('Content-Type', contentType);
+      }
+      if (!encodings) {
+        return req.pipe(res);
+      }
+      res.setHeader('Content-Encoding', encodings.split(/\s*,\s*/));
       return encodings
         .split(/\s*,\s*/)
+        .filter(x => ['gzip', 'br', 'deflate'].includes(x))
         .reduce((acc, enc) => acc.pipe(compressions[enc]()), req)
         .pipe(res);
     }

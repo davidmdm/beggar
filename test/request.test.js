@@ -428,8 +428,8 @@ describe('Tests', () => {
     assert.equal(decompressed.statusCode, 200);
     assert.equal(compressed.statusCode, 200);
 
-    assert.equal(decompressed.headers['content-encoding'], 'br,gzip');
-    assert.equal(compressed.headers['content-encoding'], 'br,gzip');
+    assert.equal(decompressed.headers['content-encoding'], 'br, gzip');
+    assert.equal(compressed.headers['content-encoding'], 'br, gzip');
 
     assert.notEqual(decompressed.body.toString(), compressed.body.toString());
     assert.equal(decompressed.body.toString(), 'hello world');
@@ -445,6 +445,34 @@ describe('Tests', () => {
 
     assert.notEqual(decompressedBuffer.toString(), compressedBuffer.toString());
     assert.equal(decompressedBuffer.toString(), 'hello world');
+  });
+
+  it('should not use implicit parsing if decompress is false and content-encoding is used', async () => {
+    const compressed = await beggar.post({
+      uri: baseUri + '/compression?encodings=gzip&contentType=application/json',
+      body: { json: 'payload' },
+      decompress: false,
+    });
+    assert.equal(compressed.body instanceof Buffer, true);
+  });
+
+  it('should use implicit parsing if decompress is false and no content-encoding is used', async () => {
+    const compressed = await beggar.post({
+      uri: baseUri + '/compression?contentType=application/json',
+      body: { json: 'payload' },
+      decompress: false,
+    });
+    assert.deepEqual(compressed.body, { json: 'payload' });
+  });
+
+  it('should return response as buffer if content encodings are not valid', async () => {
+    const compressed = await beggar.post({
+      uri: baseUri + '/compression?encodings=potato&contentType=application/json',
+      body: { json: 'payload' },
+      decompress: true,
+    });
+    assert.equal(compressed.body instanceof Buffer, true);
+    assert.equal(compressed.body.toString(), '{"json":"payload"}');
   });
 
   it('should send request with correct method when using request[method](string|URL) syntax', async () => {
