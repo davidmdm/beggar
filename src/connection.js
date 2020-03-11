@@ -32,7 +32,7 @@ function applyDecompression(response) {
   return encodings.reduceRight((acc, enc) => acc.pipe(decompressions[enc]()), response);
 }
 
-function drain(src, dst) {
+function pump(src, dst) {
   src.once('readable', () => {
     for (;;) {
       const chunk = src.read();
@@ -152,13 +152,27 @@ class Connection extends Duplex {
 
   _read() {
     if (!this.source) {
-      return this.once('_source_', () => drain(this.source, this));
+      return this.once('_source_', () => pump(this.source, this));
     }
-    drain(this.source, this);
+    pump(this.source, this);
   }
 
   _write(chunk, enc, cb) {
     this.dst.write(chunk, enc, cb);
+  }
+
+  _destroy(err, cb) {
+    if (this.outgoingMessage) {
+      this.outgoingMessage.destroy(err);
+    } else {
+      this.once('request', request => request.destroy(err));
+    }
+    if (this.incomingMessage) {
+      this.incomingMessage.destroy(err);
+    } else {
+      this.once('response', response => response.destroy(err));
+    }
+    cb(err);
   }
 
   setHeader(name, value) {

@@ -365,114 +365,119 @@ describe('Tests', () => {
     assert.equal(response.body.request.body, '{"hello":"world"}');
   });
 
-  it('should implicitly parse response.body as json if content-type of response is application/json', async () => {
-    const response = await beggar.post(baseUri + '/echo-json', { body: { parse: 'json' } });
-    assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.body, { parse: 'json' });
+  describe('Implicit Parsing', () => {
+    it('should implicitly parse response.body as json if content-type of response is application/json', async () => {
+      const response = await beggar.post(baseUri + '/echo-json', { body: { parse: 'json' } });
+      assert.equal(response.statusCode, 200);
+      assert.deepEqual(response.body, { parse: 'json' });
+    });
+
+    it('should bypass implicit parsing and return body as buffer if options.raw is true (json)', async () => {
+      const response = await beggar.post(baseUri + '/echo-json', { body: { parse: 'json' }, raw: true });
+      assert.equal(response.statusCode, 200);
+      assert.deepEqual(response.body, Buffer.from(JSON.stringify({ parse: 'json' })));
+    });
+
+    it('should bypass implicit parsing and return body as empty buffer if options.raw is true and no content is sent (json)', async () => {
+      const response = await beggar.get(baseUri + '/echo-json', { raw: true });
+      assert.equal(response.statusCode, 200);
+      assert.deepEqual(response.body, Buffer.from([]));
+    });
+
+    it('should implicitly parse response.body as string if content-type of response is text', async () => {
+      const response = await beggar.post(baseUri + '/echo-text', { body: { parse: 'text' } });
+      assert.equal(response.statusCode, 200);
+      assert.equal(response.body, '{"parse":"text"}');
+    });
   });
 
-  it('should bypass implicit parsing and return body as buffer if options.raw is true (json)', async () => {
-    const response = await beggar.post(baseUri + '/echo-json', { body: { parse: 'json' }, raw: true });
-    assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.body, Buffer.from(JSON.stringify({ parse: 'json' })));
+  describe('Raw Mode', () => {
+    it('should bypass implicit parsing and return body as buffer if options.raw is true (text)', async () => {
+      const response = await beggar.post(baseUri + '/echo-text', { body: { parse: 'text' }, raw: true });
+      assert.equal(response.statusCode, 200);
+      assert.deepEqual(response.body, Buffer.from('{"parse":"text"}'));
+    });
+
+    it('should bypass implicit parsing and return body as empty buffer if options.raw is true and no content (text)', async () => {
+      const response = await beggar.get(baseUri + '/echo-text', { raw: true });
+      assert.equal(response.statusCode, 200);
+      assert.deepEqual(response.body, Buffer.from([]));
+    });
+  });
+  describe('Empty body defaults', () => {
+    it('should have an undefined response.body if content-type is json and no body was sent back', async () => {
+      const response = await beggar.get(baseUri + '/echo-json');
+      assert.equal(response.statusCode, 200);
+      assert.equal(response.body, undefined);
+    });
+
+    it('should have an empty string on response.body if content-type is text and no body was sent back', async () => {
+      const response = await beggar.get(baseUri + '/echo-text');
+      assert.equal(response.statusCode, 200);
+      assert.equal(response.body, '');
+    });
+
+    it('should have an empty buffer on response.body if content-type is not json or text and no body was sent back', async () => {
+      const response = await beggar.get(baseUri + '/echo');
+      assert.equal(response.statusCode, 200);
+      assert.equal(response.body, '');
+    });
   });
 
-  it('should bypass implicit parsing and return body as empty buffer if options.raw is true and no content is sent (json)', async () => {
-    const response = await beggar.get(baseUri + '/echo-json', { raw: true });
-    assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.body, Buffer.from([]));
-  });
-
-  it('should implicitly parse response.body as string if content-type of response is text', async () => {
-    const response = await beggar.post(baseUri + '/echo-text', { body: { parse: 'text' } });
-    assert.equal(response.statusCode, 200);
-    assert.equal(response.body, '{"parse":"text"}');
-  });
-
-  it('should bypass implicit parsing and return body as buffer if options.raw is true (text)', async () => {
-    const response = await beggar.post(baseUri + '/echo-text', { body: { parse: 'text' }, raw: true });
-    assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.body, Buffer.from('{"parse":"text"}'));
-  });
-
-  it('should bypass implicit parsing and return body as empty buffer if options.raw is true and no content (text)', async () => {
-    const response = await beggar.get(baseUri + '/echo-text', { raw: true });
-    assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.body, Buffer.from([]));
-  });
-
-  it('should have an undefined response.body if content-type is json and no body was sent back', async () => {
-    const response = await beggar.get(baseUri + '/echo-json');
-    assert.equal(response.statusCode, 200);
-    assert.equal(response.body, undefined);
-  });
-
-  it('should have an empty string on response.body if content-type is text and no body was sent back', async () => {
-    const response = await beggar.get(baseUri + '/echo-text');
-    assert.equal(response.statusCode, 200);
-    assert.equal(response.body, '');
-  });
-
-  it('should have an empty buffer on response.body if content-type is not json or text and no body was sent back', async () => {
-    const response = await beggar.get(baseUri + '/echo');
-    assert.equal(response.statusCode, 200);
-    assert.equal(response.body, '');
-  });
-
-  it('should decompress when Content-Encoding is set on response (promises)', async () => {
-    const [decompressed, compressed] = await Promise.all([
-      beggar.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: true }),
-      beggar.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: false }),
-    ]);
-
-    assert.equal(decompressed.statusCode, 200);
-    assert.equal(compressed.statusCode, 200);
-
-    assert.equal(decompressed.headers['content-encoding'], 'br, gzip');
-    assert.equal(compressed.headers['content-encoding'], 'br, gzip');
-
-    assert.notEqual(decompressed.body.toString(), compressed.body.toString());
-    assert.equal(decompressed.body.toString(), 'hello world');
-  });
-
-  it('should decompress when Content-Encoding is set on response (streams)', async () => {
-    const [decompressedBuffer, compressedBuffer] = await Promise.all(
-      [
+  describe('Content-Encoding Decompression', () => {
+    it('should decompress when Content-Encoding is set on response (promises)', async () => {
+      const [decompressed, compressed] = await Promise.all([
         beggar.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: true }),
         beggar.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: false }),
-      ].map(readableToBuffer)
-    );
+      ]);
 
-    assert.notEqual(decompressedBuffer.toString(), compressedBuffer.toString());
-    assert.equal(decompressedBuffer.toString(), 'hello world');
-  });
+      assert.equal(decompressed.statusCode, 200);
+      assert.equal(compressed.statusCode, 200);
 
-  it('should not use implicit parsing if decompress is false and content-encoding is used', async () => {
-    const compressed = await beggar.post({
-      uri: baseUri + '/compression?encodings=gzip&contentType=application/json',
-      body: { json: 'payload' },
-      decompress: false,
+      assert.equal(decompressed.headers['content-encoding'], 'br, gzip');
+      assert.equal(compressed.headers['content-encoding'], 'br, gzip');
+
+      assert.notEqual(decompressed.body.toString(), compressed.body.toString());
+      assert.equal(decompressed.body.toString(), 'hello world');
     });
-    assert.equal(compressed.body instanceof Buffer, true);
-  });
 
-  it('should use implicit parsing if decompress is false and no content-encoding is used', async () => {
-    const compressed = await beggar.post({
-      uri: baseUri + '/compression?contentType=application/json',
-      body: { json: 'payload' },
-      decompress: false,
-    });
-    assert.deepEqual(compressed.body, { json: 'payload' });
-  });
+    it('should decompress when Content-Encoding is set on response (streams)', async () => {
+      const [decompressedBuffer, compressedBuffer] = await Promise.all(
+        [
+          beggar.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: true }),
+          beggar.post({ uri: baseUri + '/compression?encodings=br,gzip', body: 'hello world', decompress: false }),
+        ].map(readableToBuffer)
+      );
 
-  it('should return response as buffer if content encodings are not valid', async () => {
-    const compressed = await beggar.post({
-      uri: baseUri + '/compression?encodings=potato&contentType=application/json',
-      body: { json: 'payload' },
-      decompress: true,
+      assert.notEqual(decompressedBuffer.toString(), compressedBuffer.toString());
+      assert.equal(decompressedBuffer.toString(), 'hello world');
     });
-    assert.equal(compressed.body instanceof Buffer, true);
-    assert.equal(compressed.body.toString(), '{"json":"payload"}');
+    it('should not use implicit parsing if decompress is false and content-encoding is used', async () => {
+      const compressed = await beggar.post({
+        uri: baseUri + '/compression?encodings=gzip&contentType=application/json',
+        body: { json: 'payload' },
+        decompress: false,
+      });
+      assert.equal(compressed.body instanceof Buffer, true);
+    });
+    it('should use implicit parsing if decompress is false and no content-encoding is used', async () => {
+      const compressed = await beggar.post({
+        uri: baseUri + '/compression?contentType=application/json',
+        body: { json: 'payload' },
+        decompress: false,
+      });
+      assert.deepEqual(compressed.body, { json: 'payload' });
+    });
+
+    it('should return response as buffer if content encodings are not valid', async () => {
+      const compressed = await beggar.post({
+        uri: baseUri + '/compression?encodings=potato&contentType=application/json',
+        body: { json: 'payload' },
+        decompress: true,
+      });
+      assert.equal(compressed.body instanceof Buffer, true);
+      assert.equal(compressed.body.toString(), '{"json":"payload"}');
+    });
   });
 
   it('should send request with correct method when using request[method](string|URL) syntax', async () => {
@@ -487,37 +492,38 @@ describe('Tests', () => {
     assert.equal(put.body.request.method, 'PUT');
   });
 
-  it('should reject an error if response has a bad statuscode if option.rejectError is true', async () => {
-    const promise = beggar.get(baseUri + '/400-json', { rejectError: true });
-    await assert.rejects(promise, {
-      message: 'custom error message',
-      statusCode: 400,
-      body: {
-        description: 'other field',
+  describe('Reject Error', () => {
+    it('should reject an error if response has a bad statuscode if option.rejectError is true', async () => {
+      const promise = beggar.get(baseUri + '/400-json', { rejectError: true });
+      await assert.rejects(promise, {
         message: 'custom error message',
-      },
+        statusCode: 400,
+        body: {
+          description: 'other field',
+          message: 'custom error message',
+        },
+      });
+      // There is a date field in the headers that i can't do deep comparison on.
+      // Here I just want to assert that the response headers are part of the error.
+      const error = await promise.catch(err => err);
+      assert.equal(error.headers['content-type'], 'application/json; charset=utf8');
+      assert.equal(error.headers['transfer-encoding'], 'chunked');
+      assert.equal(error.headers.connection, 'close');
     });
-    // There is a date field in the headers that i can't do deep comparison on.
-    // Here I just want to assert that the response headers are part of the error.
-    const error = await promise.catch(err => err);
-    assert.equal(error.headers['content-type'], 'application/json; charset=utf8');
-    assert.equal(error.headers['transfer-encoding'], 'chunked');
-    assert.equal(error.headers.connection, 'close');
-  });
-
-  it('should reject a text error if response has a bad statuscode if option.rejectError is true', async () => {
-    const promise = beggar.get(baseUri + '/403-text', { rejectError: true });
-    await assert.rejects(promise, {
-      message: 'Forbidden',
-      statusCode: 403,
-      body: '<html><body>Error Occured!!!</body></html>',
+    it('should reject a text error if response has a bad statuscode if option.rejectError is true', async () => {
+      const promise = beggar.get(baseUri + '/403-text', { rejectError: true });
+      await assert.rejects(promise, {
+        message: 'Forbidden',
+        statusCode: 403,
+        body: '<html><body>Error Occured!!!</body></html>',
+      });
+      // There is a date field in the headers that i can't do deep comparison on.
+      // Here I just want to assert that the response headers are part of the error.
+      const error = await promise.catch(err => err);
+      assert.equal(error.headers['content-type'], 'text/html; charset=utf8');
+      assert.equal(error.headers['transfer-encoding'], 'chunked');
+      assert.equal(error.headers.connection, 'close');
     });
-    // There is a date field in the headers that i can't do deep comparison on.
-    // Here I just want to assert that the response headers are part of the error.
-    const error = await promise.catch(err => err);
-    assert.equal(error.headers['content-type'], 'text/html; charset=utf8');
-    assert.equal(error.headers['transfer-encoding'], 'chunked');
-    assert.equal(error.headers.connection, 'close');
   });
 
   it('calling then multiple times should return the same response', async () => {
@@ -532,108 +538,155 @@ describe('Tests', () => {
     const p2 = await req.then(resp => resp);
     assert.deepEqual(p1, p2);
   });
-  it('should make request with defaults', async () => {
-    const r = beggar.defaults({ auth: { user: 'test', pass: 'test' } });
-    const resp = await r({ uri: baseUri + '/details' });
-    const expectedAuth = 'Basic ' + Buffer.from('test:test').toString('base64');
-    assert.equal(resp.body.request.headers.authorization, expectedAuth);
+
+  describe('Requests with Defaults', () => {
+    it('should make request with defaults', async () => {
+      const r = beggar.defaults({ auth: { user: 'test', pass: 'test' } });
+      const resp = await r({ uri: baseUri + '/details' });
+      const expectedAuth = 'Basic ' + Buffer.from('test:test').toString('base64');
+      assert.equal(resp.body.request.headers.authorization, expectedAuth);
+    });
+
+    it('should make request with defaults (utility method)', async () => {
+      const r = beggar.defaults({ auth: { user: 'test', pass: 'test' } });
+      const resp = await r.get(baseUri + '/details');
+      const expectedAuth = 'Basic ' + Buffer.from('test:test').toString('base64');
+      assert.equal(resp.body.request.headers.authorization, expectedAuth);
+    });
+
+    it('should override defaults', async () => {
+      const r = beggar.defaults({ auth: { user: 'test', pass: 'test' } });
+      const resp = await r.get(baseUri + '/details', { auth: { user: 'patate', pass: 'aubergine' } });
+      const expectedAuth = 'Basic ' + Buffer.from('patate:aubergine').toString('base64');
+      assert.equal(resp.body.request.headers.authorization, expectedAuth);
+    });
   });
 
-  it('should make request with defaults (utility method)', async () => {
-    const r = beggar.defaults({ auth: { user: 'test', pass: 'test' } });
-    const resp = await r.get(baseUri + '/details');
-    const expectedAuth = 'Basic ' + Buffer.from('test:test').toString('base64');
-    assert.equal(resp.body.request.headers.authorization, expectedAuth);
+  describe('Request Cancellation', () => {
+    it('should cancel a request preemptively', async function() {
+      this.timeout(10000);
+      const conn = beggar.get(baseUri + '/slow');
+      conn.cancel();
+      await assert.rejects(conn, { message: 'Request Cancelled' });
+      //@ts-ignore
+      assert.equal(conn.outgoingMessage.aborted, true);
+      assert.equal(conn.isCancelled, true);
+    });
+
+    it('should cancel a request midflight', async function() {
+      this.timeout(10000);
+      const conn = beggar.get(baseUri + '/slow');
+      setTimeout(() => conn.cancel(), 2000);
+      await assert.rejects(conn, { message: 'Request Cancelled' });
+      //@ts-ignore
+      assert.equal(conn.outgoingMessage.aborted, true);
+      assert.equal(conn.isCancelled, true);
+    });
+
+    it('beggar connection should emit abort and emit error with cancel error', async function() {
+      this.timeout(10000);
+      const conn = beggar.get(baseUri + '/slow');
+      setTimeout(() => conn.cancel(), 1000);
+      const abortPromise = new Promise(resolve => conn.once('abort', resolve));
+      const errPromise = new Promise(resolve => conn.once('error', resolve));
+
+      await abortPromise;
+      const err = await errPromise;
+
+      assert.equal(err instanceof CancelError, true);
+      //@ts-ignore
+      assert.equal(conn.outgoingMessage.aborted, true);
+      assert.equal(conn.isCancelled, true);
+
+      const err2 = await conn.catch(err => err);
+      assert.equal(err, err2);
+    });
+
+    it('cancelled requests should reject the same error every time catch is invoked', async function() {
+      this.timeout(10000);
+      const conn = beggar.get(baseUri + '/slow');
+      conn.cancel();
+
+      const p1 = conn.catch(err => err);
+      const p2 = conn.catch(err => err);
+      assert.notEqual(p1, p2);
+
+      const [err1, err2] = await Promise.all([p1, p2]);
+      assert.equal(err1 instanceof CancelError, true);
+      assert.equal(err1.message, 'Request Cancelled');
+      assert.equal(err1, err2);
+    });
   });
 
-  it('should override defaults', async () => {
-    const r = beggar.defaults({ auth: { user: 'test', pass: 'test' } });
-    const resp = await r.get(baseUri + '/details', { auth: { user: 'patate', pass: 'aubergine' } });
-    const expectedAuth = 'Basic ' + Buffer.from('patate:aubergine').toString('base64');
-    assert.equal(resp.body.request.headers.authorization, expectedAuth);
+  describe('Simple mode', () => {
+    it('should only return body if request is simple - buffer', async () => {
+      const body = await beggar.post(baseUri + '/echo', { body: 'simple test', simple: true });
+      assert.equal(body instanceof Buffer, true);
+      assert.equal(body.toString(), 'simple test');
+    });
+
+    it('should only return body if request is simple - text', async () => {
+      const body = await beggar.post(baseUri + '/echo-text', { body: 'simple test', simple: true });
+      assert.equal(body, 'simple test');
+    });
+
+    it('should only return body if request is simple - json', async () => {
+      const body = await beggar.post(baseUri + '/echo-json', { body: { simple: 'test' }, simple: true });
+      assert.deepEqual(body, { simple: 'test' });
+    });
+
+    it('should reject statusCode errors when simple even if rejectError is false', async () => {
+      await assert.rejects(
+        beggar.get({
+          uri: baseUri + '/400-json',
+          simple: true,
+          rejectError: false,
+        }),
+        {
+          statusCode: 400,
+          message: 'custom error message',
+        }
+      );
+    });
   });
 
-  it('should cancel a request preemptively', async function() {
-    this.timeout(10000);
-    const conn = beggar.get(baseUri + '/slow');
-    conn.cancel();
-    await assert.rejects(conn, { message: 'Request Cancelled' });
-    //@ts-ignore
-    assert.equal(conn.outgoingMessage.aborted, true);
-    assert.equal(conn.isCancelled, true);
-  });
+  describe('Internal Cleanups via Destroy', () => {
+    it('should destroy internal request', async () => {
+      const conn = beggar(baseUri);
+      conn.destroy();
+      assert.equal(conn.destroyed, true);
+      await new Promise(resolve => conn.once('error', resolve));
+      //@ts-ignore
+      assert.equal(conn.outgoingMessage.socket.destroyed, true);
+      //@ts-ignore
+      assert.equal(conn.incomingMessage, null);
+    });
 
-  it('should cancel a request midflight', async function() {
-    this.timeout(10000);
-    const conn = beggar.get(baseUri + '/slow');
-    setTimeout(() => conn.cancel(), 2000);
-    await assert.rejects(conn, { message: 'Request Cancelled' });
-    //@ts-ignore
-    assert.equal(conn.outgoingMessage.aborted, true);
-    assert.equal(conn.isCancelled, true);
-  });
+    it('should destroy request and response', async () => {
+      const conn = beggar(baseUri);
+      await new Promise(resolve => conn.once('response', resolve));
+      conn.destroy();
 
-  it('beggar connection should emit abort and emit error with cancel error', async function() {
-    this.timeout(10000);
-    const conn = beggar.get(baseUri + '/slow');
-    setTimeout(() => conn.cancel(), 1000);
-    const abortPromise = new Promise(resolve => conn.once('abort', resolve));
-    const errPromise = new Promise(resolve => conn.once('error', resolve));
+      assert.equal(conn.destroyed, true);
+      //@ts-ignore
+      assert.equal(conn.outgoingMessage.socket.destroyed, true);
+      //@ts-ignore
+      assert.equal(conn.incomingMessage.socket.destroyed, true);
+    });
 
-    await abortPromise;
-    const err = await errPromise;
+    it('should emit error passed to destroy', async () => {
+      const err = new Error('Custom Error');
+      const conn = beggar(baseUri);
+      await new Promise(resolve => conn.once('response', resolve));
+      process.nextTick(() => conn.destroy(err));
 
-    assert.equal(err instanceof CancelError, true);
-    //@ts-ignore
-    assert.equal(conn.outgoingMessage.aborted, true);
-    assert.equal(conn.isCancelled, true);
-
-    const err2 = await conn.catch(err => err);
-    assert.equal(err, err2);
-  });
-
-  it('cancelled requests should reject the same error every time catch is invoked', async function() {
-    this.timeout(10000);
-    const conn = beggar.get(baseUri + '/slow');
-    conn.cancel();
-
-    const p1 = conn.catch(err => err);
-    const p2 = conn.catch(err => err);
-    assert.notEqual(p1, p2);
-
-    const [err1, err2] = await Promise.all([p1, p2]);
-    assert.equal(err1 instanceof CancelError, true);
-    assert.equal(err1.message, 'Request Cancelled');
-    assert.equal(err1, err2);
-  });
-
-  it('should only return body if request is simple - buffer', async () => {
-    const body = await beggar.post(baseUri + '/echo', { body: 'simple test', simple: true });
-    assert.equal(body instanceof Buffer, true);
-    assert.equal(body.toString(), 'simple test');
-  });
-
-  it('should only return body if request is simple - text', async () => {
-    const body = await beggar.post(baseUri + '/echo-text', { body: 'simple test', simple: true });
-    assert.equal(body, 'simple test');
-  });
-
-  it('should only return body if request is simple - json', async () => {
-    const body = await beggar.post(baseUri + '/echo-json', { body: { simple: 'test' }, simple: true });
-    assert.deepEqual(body, { simple: 'test' });
-  });
-
-  it('should reject statusCode errors when simple even if rejectError is false', async () => {
-    await assert.rejects(
-      beggar.get({
-        uri: baseUri + '/400-json',
-        simple: true,
-        rejectError: false,
-      }),
-      {
-        statusCode: 400,
-        message: 'custom error message',
-      }
-    );
+      const emittedError = await new Promise(resolve => conn.on('error', resolve));
+      assert.equal(emittedError, err);
+      assert.equal(conn.destroyed, true);
+      //@ts-ignore
+      assert.equal(conn.outgoingMessage.socket.destroyed, true);
+      //@ts-ignore
+      assert.equal(conn.incomingMessage.socket.destroyed, true);
+    });
   });
 });

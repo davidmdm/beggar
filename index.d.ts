@@ -20,6 +20,7 @@ export declare type RequestOptions = {
     user: string;
     pass: string;
   };
+  // Request Body body
   body?: Buffer | string | Object;
   form?: Dictionary<any>;
   qs?: Dictionary<any>;
