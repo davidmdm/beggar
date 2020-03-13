@@ -566,11 +566,14 @@ describe('Tests', () => {
     it('should cancel a request preemptively', async function() {
       this.timeout(10000);
       const conn = beggar.get(baseUri + '/slow');
+      // The connection will emit multiple errors and we don't want uncaught errors
+      conn.on('error', () => {});
       conn.cancel();
+      assert.equal(conn.isCancelled, true);
+
       await assert.rejects(conn, { message: 'Request Cancelled' });
       //@ts-ignore
       assert.equal(conn.outgoingMessage.aborted, true);
-      assert.equal(conn.isCancelled, true);
     });
 
     it('should cancel a request midflight', async function() {

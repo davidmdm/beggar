@@ -188,7 +188,7 @@ class Connection extends Duplex {
     } else {
       // if cancel is called synchonously on connection, errors might be thrown before
       // there was a chance to register handlers. Abort asynchronously.
-      setImmediate(() => this.outgoingMessage.abort());
+      process.nextTick(() => this.outgoingMessage.abort());
     }
     this.isCancelled = true;
   }
@@ -200,6 +200,7 @@ class Connection extends Duplex {
     if (this.outgoingMessage && this.outgoingMessage.aborted) {
       this.responsePromise = Promise.reject(new CancelError());
     } else {
+      //@ts-ignore
       this.responsePromise = Promise.race([
         (async () => {
           if (!this.isPipedTo) {

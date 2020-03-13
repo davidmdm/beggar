@@ -1,6 +1,6 @@
 {
   "name": "beggar",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "description": "",
   "main": "index.js",
   "typings": "index.d.ts",
@@ -10,16 +10,15 @@
   },
   "devDependencies": {
     "@types/body-parser": "^1.19.0",
-    "@types/mocha": "^7.0.1",
+    "@types/mocha": "^7.0.2",
     "@types/multer": "^1.4.2",
-    "@types/node": "^13.7.4",
+    "@types/node": "^13.9.0",
     "@types/qs": "^6.9.1",
     "body-parser": "^1.19.0",
-    "mocha": "^7.0.1",
+    "mocha": "^7.1.0",
     "multer": "^1.4.2",
     "nyc": "^15.0.0",
-    "request": "^2.88.2",
-    "typescript": "^3.8.2"
+    "typescript": "^3.8.3"
   },
   "scripts": {
     "pub": "npm i && npm t && npm publish",
