@@ -194,12 +194,10 @@ class Connection extends Duplex {
   }
 
   then(fn, handle) {
-    if (this.responsePromise) {
-      return this.responsePromise.then(fn, handle);
-    }
-    if (this.outgoingMessage && this.outgoingMessage.aborted) {
+    if (!this.responsePromise && this.outgoingMessage && this.outgoingMessage.aborted) {
       this.responsePromise = Promise.reject(new CancelError());
-    } else {
+    }
+    if (!this.responsePromise) {
       //@ts-ignore
       this.responsePromise = Promise.race([
         (async () => {
