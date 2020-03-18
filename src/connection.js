@@ -207,8 +207,7 @@ class Connection extends Duplex {
           const response = this.incomingMessage || (await new Promise(resolve => this.once('response', resolve)));
           const buffer = await readableToBuffer(this);
           if ((this.opts.rejectError || this.opts.simple) && !statusOk(response.statusCode)) {
-            this.responseError = getResponseError(response, buffer);
-            throw this.responseError;
+            throw getResponseError(response, buffer);
           }
 
           const encodings = getValidEncodings(response.headers['content-encoding']);
