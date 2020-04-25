@@ -11,11 +11,11 @@ const { createServer } = require('./server');
 
 const testingServer = createServer();
 
-const readableToBuffer = readable => {
+const readableToBuffer = (readable) => {
   return new Promise((resolve, reject) => {
     const parts = [];
     readable
-      .on('data', data => parts.push(data))
+      .on('data', (data) => parts.push(data))
       .on('end', () => resolve(Buffer.concat(parts)))
       .on('error', reject);
   });
@@ -25,12 +25,12 @@ describe('Tests', () => {
   let baseUri;
 
   before(async () => {
-    await new Promise(resolve => testingServer.listen(0, resolve));
+    await new Promise((resolve) => testingServer.listen(0, resolve));
     //@ts-ignore
     baseUri = 'http://localhost:' + testingServer.address().port;
   });
 
-  after(() => new Promise(resolve => testingServer.close(resolve)));
+  after(() => new Promise((resolve) => testingServer.close(resolve)));
 
   it('should not drop beginning of payload when response is read to later', async () => {
     const echoRequest = beggar({
@@ -39,7 +39,7 @@ describe('Tests', () => {
       body: 'the string I want it to echo back to me',
     });
 
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     const response = await echoRequest;
     assert.equal(response.body, 'the string I want it to echo back to me');
@@ -131,7 +131,7 @@ describe('Tests', () => {
 
     let buffer = Buffer.from([]);
 
-    await new Promise(resolve =>
+    await new Promise((resolve) =>
       readable
         .pipe(beggar({ method: 'post', uri: baseUri + '/echo' }))
         .pipe(
@@ -152,15 +152,15 @@ describe('Tests', () => {
     let body = '';
     const req = beggar(baseUri + '/home');
     req.end();
-    req.on('data', data => (body += data));
-    await new Promise(resolve => req.on('end', resolve));
+    req.on('data', (data) => (body += data));
+    await new Promise((resolve) => req.on('end', resolve));
     assert.equal(body, 'Welcome to the homepage');
   });
 
   it('should pipe the data response body to a given writable source', async () => {
     let buffer = Buffer.from([]);
 
-    await new Promise(resolve =>
+    await new Promise((resolve) =>
       beggar(baseUri + '/home')
         .pipe(
           new Writable({
@@ -203,7 +203,7 @@ describe('Tests', () => {
 
   it('should redirect if followAllRedirects is true (streams)', async () => {
     let buffer = Buffer.from([]);
-    await new Promise(resolve =>
+    await new Promise((resolve) =>
       beggar
         .get({ uri: baseUri + '/redirect/3', followAllRedirects: true })
         .pipe(
@@ -232,7 +232,7 @@ describe('Tests', () => {
   });
 
   it('should throw appropriate error if redirect end in some response error (stream)', async () => {
-    const err = await new Promise(resolve =>
+    const err = await new Promise((resolve) =>
       beggar({
         uri: baseUri + '/redirectToHangUp',
         followAllRedirects: true,
@@ -319,7 +319,7 @@ describe('Tests', () => {
   });
 
   it('should emit an error not using promises (response error)', async () => {
-    const error = await new Promise(resolve =>
+    const error = await new Promise((resolve) =>
       beggar(baseUri + '/connection-drop')
         .on('error', resolve)
         .end()
@@ -329,11 +329,7 @@ describe('Tests', () => {
   });
 
   it('should emit an error not using promises (request error)', async () => {
-    const error = await new Promise(resolve =>
-      beggar('http://localhost:1234')
-        .on('error', resolve)
-        .end()
-    );
+    const error = await new Promise((resolve) => beggar('http://localhost:1234').on('error', resolve).end());
     assert.ok(error);
     assert.equal(error.message, 'connect ECONNREFUSED 127.0.0.1:1234');
   });
@@ -505,7 +501,7 @@ describe('Tests', () => {
       });
       // There is a date field in the headers that i can't do deep comparison on.
       // Here I just want to assert that the response headers are part of the error.
-      const error = await promise.catch(err => err);
+      const error = await promise.catch((err) => err);
       assert.equal(error.headers['content-type'], 'application/json; charset=utf8');
       assert.equal(error.headers['transfer-encoding'], 'chunked');
       assert.equal(error.headers.connection, 'close');
@@ -519,7 +515,7 @@ describe('Tests', () => {
       });
       // There is a date field in the headers that i can't do deep comparison on.
       // Here I just want to assert that the response headers are part of the error.
-      const error = await promise.catch(err => err);
+      const error = await promise.catch((err) => err);
       assert.equal(error.headers['content-type'], 'text/html; charset=utf8');
       assert.equal(error.headers['transfer-encoding'], 'chunked');
       assert.equal(error.headers.connection, 'close');
@@ -528,14 +524,14 @@ describe('Tests', () => {
 
   it('calling then multiple times should return the same response', async () => {
     const req = beggar(baseUri + '/details');
-    const [p1, p2] = await Promise.all([req.then(resp => resp), req.then(resp => resp)]);
+    const [p1, p2] = await Promise.all([req.then((resp) => resp), req.then((resp) => resp)]);
     assert.deepEqual(p1, p2);
   });
 
   it('should return the same response when calling then again after an initial promise has resolved', async () => {
     const req = beggar(baseUri + '/details');
-    const p1 = await req.then(resp => resp);
-    const p2 = await req.then(resp => resp);
+    const p1 = await req.then((resp) => resp);
+    const p2 = await req.then((resp) => resp);
     assert.deepEqual(p1, p2);
   });
 
@@ -563,7 +559,7 @@ describe('Tests', () => {
   });
 
   describe('Request Cancellation', () => {
-    it('should cancel a request preemptively', async function() {
+    it('should cancel a request preemptively', async function () {
       this.timeout(10000);
       const conn = beggar.get(baseUri + '/slow');
       // The connection will emit multiple errors and we don't want uncaught errors
@@ -576,7 +572,7 @@ describe('Tests', () => {
       assert.equal(conn.outgoingMessage.aborted, true);
     });
 
-    it('should cancel a request midflight', async function() {
+    it('should cancel a request midflight', async function () {
       this.timeout(10000);
       const conn = beggar.get(baseUri + '/slow');
       setTimeout(() => conn.cancel(), 2000);
@@ -586,12 +582,12 @@ describe('Tests', () => {
       assert.equal(conn.isCancelled, true);
     });
 
-    it('beggar connection should emit abort and emit error with cancel error', async function() {
+    it('beggar connection should emit abort and emit error with cancel error', async function () {
       this.timeout(10000);
       const conn = beggar.get(baseUri + '/slow');
       setTimeout(() => conn.cancel(), 1000);
-      const abortPromise = new Promise(resolve => conn.once('abort', resolve));
-      const errPromise = new Promise(resolve => conn.once('error', resolve));
+      const abortPromise = new Promise((resolve) => conn.once('abort', resolve));
+      const errPromise = new Promise((resolve) => conn.once('error', resolve));
 
       await abortPromise;
       const err = await errPromise;
@@ -601,17 +597,17 @@ describe('Tests', () => {
       assert.equal(conn.outgoingMessage.aborted, true);
       assert.equal(conn.isCancelled, true);
 
-      const err2 = await conn.catch(err => err);
+      const err2 = await conn.catch((err) => err);
       assert.equal(err, err2);
     });
 
-    it('cancelled requests should reject the same error every time catch is invoked', async function() {
+    it('cancelled requests should reject the same error every time catch is invoked', async function () {
       this.timeout(10000);
       const conn = beggar.get(baseUri + '/slow');
       conn.cancel();
 
-      const p1 = conn.catch(err => err);
-      const p2 = conn.catch(err => err);
+      const p1 = conn.catch((err) => err);
+      const p2 = conn.catch((err) => err);
       assert.notEqual(p1, p2);
 
       const [err1, err2] = await Promise.all([p1, p2]);
@@ -658,16 +654,22 @@ describe('Tests', () => {
       const conn = beggar(baseUri);
       conn.destroy();
       assert.equal(conn.destroyed, true);
-      await new Promise(resolve => conn.once('error', resolve));
-      //@ts-ignore
-      assert.equal(conn.outgoingMessage.socket.destroyed, true);
+      await new Promise((resolve) => conn.once('error', resolve));
+      if (process.versions.node.startsWith('14')) {
+        // in nodejs version 14+ node is smart enough to not create a node if it is synchonously destroyed.
+        //@ts-ignore
+        assert.equal(conn.outgoingMessage.socket, null);
+      } else {
+        //@ts-ignore
+        assert.equal(conn.outgoingMessage.socket.destroyed, true);
+      }
       //@ts-ignore
       assert.equal(conn.incomingMessage, null);
     });
 
     it('should destroy request and response', async () => {
       const conn = beggar(baseUri);
-      await new Promise(resolve => conn.once('response', resolve));
+      await new Promise((resolve) => conn.once('response', resolve));
       conn.destroy();
 
       assert.equal(conn.destroyed, true);
@@ -680,10 +682,10 @@ describe('Tests', () => {
     it('should emit error passed to destroy', async () => {
       const err = new Error('Custom Error');
       const conn = beggar(baseUri);
-      await new Promise(resolve => conn.once('response', resolve));
+      await new Promise((resolve) => conn.once('response', resolve));
       process.nextTick(() => conn.destroy(err));
 
-      const emittedError = await new Promise(resolve => conn.on('error', resolve));
+      const emittedError = await new Promise((resolve) => conn.on('error', resolve));
       assert.equal(emittedError, err);
       assert.equal(conn.destroyed, true);
       //@ts-ignore
