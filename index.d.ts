@@ -37,8 +37,9 @@ export declare type RequestOptions = {
 
 type PartialRequestOptions = Partial<RequestOptions>;
 type Simple = { simple: true };
+type WithUri = { uri: URI };
 
-export declare class CancelError implements Error {}
+export declare class CancelError extends Error {}
 
 export declare type ResolvedResponse = IncomingMessage & {
   body: any;
@@ -52,10 +53,12 @@ export declare type RequestFunction = {
   <T extends PartialRequestOptions>(uri: string | URL, options?: T): Connection<T>;
 };
 
-type UriOption = { uri: string | URL };
-type DefaultUriRequestFunction = {
-  <T extends PartialRequestOptions>(options: T): Connection<T>;
-  <T extends PartialRequestOptions>(uri: string | URL, options?: T): Connection<T>;
+type Eval<T> = { [Key in keyof T]: T[Key] } & {};
+type Override<A, B> = Eval<Omit<A, Extract<keyof A, keyof B>> & B>;
+
+type DefaultedRequestFunction<D extends PartialRequestOptions> = {
+  <T extends D extends WithUri ? PartialRequestOptions : RequestOptions>(options: T): Connection<Override<D, T>>;
+  <T extends PartialRequestOptions>(uri: string | URL, options?: T): Connection<Override<D, T>>;
 };
 
 export declare const beggar: RequestFunction & {
@@ -65,15 +68,15 @@ export declare const beggar: RequestFunction & {
   patch: RequestFunction;
   head: RequestFunction;
   delete: RequestFunction;
-  defaults: <T extends Partial<RequestOptions>>(
+  defaults: <T extends PartialRequestOptions>(
     options: T
-  ) => (T extends UriOption ? DefaultUriRequestFunction : RequestFunction) & {
-    get: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
-    post: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
-    put: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
-    patch: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
-    head: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
-    delete: T extends UriOption ? DefaultUriRequestFunction : RequestFunction;
+  ) => DefaultedRequestFunction<T> & {
+    get: DefaultedRequestFunction<T>;
+    post: DefaultedRequestFunction<T>;
+    put: DefaultedRequestFunction<T>;
+    patch: DefaultedRequestFunction<T>;
+    head: DefaultedRequestFunction<T>;
+    delete: DefaultedRequestFunction<T>;
   };
 };
 export {};
