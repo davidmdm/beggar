@@ -49,16 +49,18 @@ export declare type Connection<T> = Promise<T extends Simple ? any : ResolvedRes
   Duplex & { cancel: () => void; isCancelled: boolean };
 
 export declare type RequestFunction = {
+  <T extends Uri>(uri: T): Connection<{ uri: typeof uri }>;
   <T extends RequestOptions>(options: T): Connection<T>;
-  <T extends PartialRequestOptions>(uri: string | URL, options?: T): Connection<T>;
+  <T extends PartialRequestOptions>(uri: string | URL, options: T): Connection<T>;
 };
 
 type Eval<T> = { [Key in keyof T]: T[Key] } & {};
 type Override<A, B> = Eval<Omit<A, Extract<keyof A, keyof B>> & B>;
 
 type DefaultedRequestFunction<D extends PartialRequestOptions> = {
+  <T extends Uri>(uri: T): Connection<Override<D, { uri: typeof uri }>>;
   <T extends D extends WithUri ? PartialRequestOptions : RequestOptions>(options: T): Connection<Override<D, T>>;
-  <T extends PartialRequestOptions>(uri: string | URL, options?: T): Connection<Override<D, T>>;
+  <T extends PartialRequestOptions>(uri: string | URL, options: T): Connection<Override<D, T>>;
 };
 
 export declare const beggar: RequestFunction & {
