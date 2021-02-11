@@ -74,9 +74,7 @@ const createServer = () => {
       if (!req.headers.authorization.startsWith('Basic ')) {
         return res.writeHead(401).end();
       }
-      const [user, pass] = Buffer.from(req.headers.authorization.slice(6), 'base64')
-        .toString()
-        .split(':');
+      const [user, pass] = Buffer.from(req.headers.authorization.slice(6), 'base64').toString().split(':');
       if (user !== 'admin' || pass !== '1234') {
         return res.writeHead(401).end();
       }

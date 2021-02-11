@@ -70,7 +70,7 @@ const createProxiedConnection = options => {
       agent: false,
       ...options.proxyTls,
     })
-    .on('connect', function(_, socket) {
+    .on('connect', function (_, socket) {
       const req = targetHttpLib
         .request(options.uri, {
           method: options.method && options.method.toUpperCase(),
@@ -145,9 +145,15 @@ function request(uri, opts = {}) {
   const options = sanitizeOpts(isUri(uri) ? { ...opts, uri } : uri);
 
   if (options.qs) {
-    options.uri.search = qs.stringify({ ...Object.fromEntries(options.uri.searchParams), ...options.qs });
+    options.uri.search = qs.stringify({
+      ...Object.fromEntries(options.uri.searchParams),
+      ...options.qs,
+    });
   } else if (options.query) {
-    options.uri.search = querystring.stringify({ ...Object.fromEntries(options.uri.searchParams), ...options.query });
+    options.uri.search = querystring.stringify({
+      ...Object.fromEntries(options.uri.searchParams),
+      ...options.query,
+    });
   }
 
   const conn = options.proxy ? createProxiedConnection(options) : createConnection(options);

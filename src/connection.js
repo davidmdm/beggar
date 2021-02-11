@@ -216,9 +216,11 @@ class Connection extends Duplex {
             this.opts.raw || encodings === null || (this.opts.decompress === false && encodings.length > 0);
 
           const body = shouldUseRawBuffer ? buffer : parseResponseBuffer(response.headers['content-type'], buffer);
+
           if (this.opts.simple) {
             return body;
           }
+
           response.body = body;
           return response;
         })(),

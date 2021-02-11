@@ -18,10 +18,7 @@ const serve = str => (_, res) => res.writeHead(200, { 'Content-Type': 'text/plan
 
 const listen = (server, port) => {
   return new Promise((resolve, reject) => {
-    server
-      .on('listening', resolve)
-      .on('error', reject)
-      .listen(port);
+    server.on('listening', resolve).on('error', reject).listen(port);
   });
 };
 
