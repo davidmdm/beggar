@@ -587,7 +587,7 @@ describe('Tests', () => {
       const conn = beggar.get(baseUri + '/slow');
       setTimeout(() => conn.cancel(), 1000);
       const abortPromise = new Promise((resolve) => conn.once('abort', resolve));
-      const errPromise = new Promise((resolve) => conn.once('error', resolve));
+      const errPromise = new Promise((resolve) => conn.on('error', resolve));
 
       await abortPromise;
       const err = await errPromise;
@@ -655,7 +655,8 @@ describe('Tests', () => {
       conn.destroy();
       assert.equal(conn.destroyed, true);
       await new Promise((resolve) => conn.once('error', resolve));
-      if (process.versions.node.startsWith('14')) {
+      const [major] = process.versions.node.split('.').map(Number);
+      if (major >= 14) {
         // in nodejs version 14+ node is smart enough to not create a node if it is synchonously destroyed.
         //@ts-ignore
         assert.equal(conn.outgoingMessage.socket, null);
