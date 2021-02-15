@@ -37,7 +37,7 @@ export declare type RequestOptions = {
 
 type PartialRequestOptions = Partial<RequestOptions>;
 type Simple = { simple: true };
-type WithUri = { uri: URI };
+type WithUri = { uri: Uri };
 
 export declare class CancelError extends Error {}
 
