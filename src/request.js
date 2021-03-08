@@ -144,6 +144,10 @@ function isUri(value) {
 function request(uri, opts = {}) {
   const options = sanitizeOpts(isUri(uri) ? { ...opts, uri } : uri);
 
+  if (options.path) {
+    options.uri.pathname = options.path;
+  }
+
   if (options.qs) {
     options.uri.search = qs.stringify({
       ...Object.fromEntries(options.uri.searchParams),

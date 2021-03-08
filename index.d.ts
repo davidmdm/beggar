@@ -33,6 +33,7 @@ export declare type RequestOptions = {
   raw?: boolean;
   tls?: TlsOptions;
   simple?: boolean;
+  path?: string;
 };
 
 type PartialRequestOptions = Partial<RequestOptions>;

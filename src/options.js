@@ -63,6 +63,7 @@ const sanitizeOpts = options => {
     raw: options.raw === true,
     tls: sanitizeTlsOptions(options.tls),
     simple: options.simple === true,
+    path: options.path,
   };
 };
 

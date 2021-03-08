@@ -582,6 +582,25 @@ describe('Tests', () => {
       const expectedAuth = 'Basic ' + Buffer.from('patate:aubergine').toString('base64');
       assert.equal(resp.body.request.headers.authorization, expectedAuth);
     });
+
+    it('should use default uri but override with path', async () => {
+      const client = beggar.defaults({ uri: baseUri });
+
+      const resp = await client.get({ path: '/details' });
+
+      // Headers contain user-agent which changes with the version, and the host which changes
+      // with the port. Test deterministic settings
+
+      delete resp.body.request.headers;
+
+      assert.deepStrictEqual(resp.body, {
+        request: {
+          body: '',
+          method: 'GET',
+          path: '/details',
+        },
+      });
+    });
   });
 
   describe('Request Cancellation', () => {
