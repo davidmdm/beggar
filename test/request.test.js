@@ -584,22 +584,26 @@ describe('Tests', () => {
     });
 
     it('should use default uri but override with path', async () => {
-      const client = beggar.defaults({ uri: baseUri });
+      const client = beggar.defaults({ uri: baseUri + '/details', headers: { Authorization: 'test' } });
 
-      const resp = await client.get({ path: '/details' });
+      const resp = await client.get({ path: '/details/withextra' });
 
       // Headers contain user-agent which changes with the version, and the host which changes
       // with the port. Test deterministic settings
 
-      delete resp.body.request.headers;
+      resp.body.request.headers = { authorization: resp.body.request.headers.authorization };
 
       assert.deepStrictEqual(resp.body, {
         request: {
           body: '',
           method: 'GET',
-          path: '/details',
+          path: '/details/withextra',
+          headers: { authorization: 'test' },
         },
       });
+
+      const defaultResp = await client.get();
+      assert.strictEqual(defaultResp.body.request.path, '/details');
     });
   });
 

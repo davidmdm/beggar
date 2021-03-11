@@ -1,7 +1,5 @@
 # Beggar
 
-> :warning: This module is new and looking for feedback. It has not yet reached version semver v1.0.0 : **Not recommended to be used in production**
-
 ## Preamble
 
 Beggar is heavily inspired by mikael's [request](https://www.npmjs.com/package/request) module.
@@ -70,6 +68,8 @@ I would like to keep the module as thin a wrapper over NodeJS's http.ClientReque
    `string` (must be HTTP verb)
 - uri  
    `string` or `URL`
+- path  
+   `string` overrides the path component of the uri. Useful when creating a beggar instance with a default uri and simply updating the path.
 - headers  
    `object` object containing headers
 - body  

@@ -48,7 +48,7 @@ const sanitizeOpts = options => {
   return {
     method: options.method,
     headers: options.headers,
-    uri: options.uri instanceof URL ? options.uri : new URL(options.uri),
+    uri: new URL(options.uri),
     proxy: getProxyUri(options.proxy),
     proxyTls: options.proxy && sanitizeTlsOptions(options.proxy.tls),
     maxRedirects: getMaxRedirects(options),
