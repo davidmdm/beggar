@@ -61,6 +61,7 @@ function statusOk(statusCode) {
 class HttpError extends Error {
   constructor(statusCode, message, headers, body) {
     super(message);
+    this.name = 'HttpError';
     this.statusCode = statusCode;
     this.headers = headers;
     this.body = body;
@@ -241,4 +242,4 @@ class Connection extends Duplex {
   }
 }
 
-module.exports = { Connection, CancelError };
+module.exports = { Connection, CancelError, HttpError };

@@ -8,6 +8,7 @@ const { Readable, Writable } = require('stream');
 
 const { beggar, CancelError } = require('..');
 const { createServer } = require('./server');
+const { HttpError } = require('..');
 
 const testingServer = createServer();
 
@@ -698,6 +699,18 @@ describe('Tests', () => {
           message: 'custom error message',
         }
       );
+    });
+
+    it('should reject an instance of HttpError in simple mode', async () => {
+      const err = await beggar.get(baseUri + '/400-json', { simple: true }).catch(x => x);
+      assert.ok(err instanceof HttpError);
+      assert.strictEqual(err.name, 'HttpError');
+      assert.strictEqual(err.statusCode, 400);
+      assert.ok('headers' in err);
+      assert.deepStrictEqual(err.body, {
+        description: 'other field',
+        message: 'custom error message',
+      });
     });
   });
 

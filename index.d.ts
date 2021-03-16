@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { URL } from 'url';
 import { SecureContextOptions } from 'tls';
-import { IncomingMessage, Agent } from 'http';
+import { IncomingMessage, Agent, IncomingHttpHeaders } from 'http';
 import { Readable, Duplex } from 'stream';
 
 declare type TlsOptions = SecureContextOptions & {
@@ -41,6 +41,12 @@ type Simple = { simple: true };
 type WithUri = { uri: Uri };
 
 export declare class CancelError extends Error {}
+
+export declare class HttpError extends Error {
+  statusCode: number;
+  headers: IncomingHttpHeaders;
+  body: any;
+}
 
 export declare type ResolvedResponse = IncomingMessage & {
   body: any;
